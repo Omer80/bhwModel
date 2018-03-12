@@ -105,8 +105,8 @@ class bwhModel(object):
             """ Ms version tradeoff of Lambda with Ms AND Gamma
             """
             b,w,h = symbols('b w h')
-            self.Vs_symbols = b,w,h
-            self.setup['nvar']=len(self.Vs_symbols)
+            self.setup['Vs_symbols'] = b,w,h
+            self.setup['nvar']=len(self.setup['Vs_symbols'])
             from sympy.functions import cos as symcos
             g    = (1.0+p['eta']*b)*(1.0+p['eta']*b)
             evapw = (p['nuw']*w)/(1.0+p['rhow']*b)
