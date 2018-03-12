@@ -225,7 +225,7 @@ def movie_maker(fname):
         ani.save('%s.mp4'%fname)
         print "Movie made! File name is %s.mp4"%fname
 
-def create_animation(fname,showtime=False):
+def create_animation(fname,output=None,showtime=False):
     import matplotlib
     matplotlib.use('Agg')    
     import matplotlib.animation as animation
@@ -241,19 +241,19 @@ def create_animation(fname,showtime=False):
             ax[0].set_ylim([-0.01,1.0])
             ax[1].set_ylim([-0.01,1.0])
             ax[2].set_ylim([-0.01,1.0])
-            ax[0].set_ylabel(r'$b_1$', fontsize=25)
-            ax[1].set_ylabel(r'$b_2$', fontsize=25)
-            ax[2].set_ylabel(r'$b_3$', fontsize=25)
+            ax[0].set_ylabel(r'$b$', fontsize=25)
+            ax[1].set_ylabel(r'$w$', fontsize=25)
+            ax[2].set_ylabel(r'$h$', fontsize=25)
             ax[2].set_xlabel(r'$x$', fontsize=25)
             x  = rootgrp['x'][:]
             ax[0].set_xlim([x[0],x[-1]])
-            b1 = rootgrp['b1'][:,:]
-            b2 = rootgrp['b2'][:,:]
-            b3 = rootgrp['b3'][:,:]
+            b = rootgrp['b'][:,:]
+            w = rootgrp['w'][:,:]
+            h = rootgrp['h'][:,:]
             for i in xrange(len(t)):
-                line1, = ax[0].plot(x,b1[i],'g-')
-                line2, = ax[1].plot(x,b2[i],'g-')
-                line3, = ax[2].plot(x,b3[i],'g-')
+                line1, = ax[0].plot(x,b[i],'g-')
+                line2, = ax[1].plot(x,w[i],'g-')
+                line3, = ax[2].plot(x,h[i],'g-')
                 if showtime:
                     ax.set_title(r'$b$ at $t={:4.3f}$'.format(t[i]), fontsize=25)
                 ims.append([line1,line2,line3])
@@ -263,29 +263,32 @@ def create_animation(fname,showtime=False):
             ax[0].set_aspect('equal', 'datalim')
             ax[0].set_adjustable('box-forced')
     #        ax1.autoscale(False)
-            ax[0].set_title(r'$b_1$', fontsize=25)
-            b1 = rootgrp['b1'][:,:,:]
+            ax[0].set_title(r'$b$', fontsize=25)
+            b = rootgrp['b'][:,:,:]
             ax[1].set_aspect('equal', 'datalim')
             ax[1].set_adjustable('box-forced')
     #        ax1.autoscale(False)
-            ax[1].set_title(r'$b_1$', fontsize=25)
-            b2 = rootgrp['b2'][:,:,:]
+            ax[1].set_title(r'$w$', fontsize=25)
+            w = rootgrp['w'][:,:,:]
             ax[2].set_aspect('equal', 'datalim')
             ax[2].set_adjustable('box-forced')
     #        ax1.autoscale(False)
-            ax[2].set_title(r'$b_1$', fontsize=25)
-            b3 = rootgrp['b3'][:,:,:]
+            ax[2].set_title(r'$h$', fontsize=25)
+            h = rootgrp['h'][:,:,:]
             for i in xrange(len(t)):
-                im1, = ax.imshow(b1[i],cmap=plt.cm.YlGn, animated=True,vmin=0.0,vmax=1.0)
-                im2, = ax.imshow(b2[i],cmap=plt.cm.YlGn, animated=True,vmin=0.0,vmax=1.0)
-                im3, = ax.imshow(b3[i],cmap=plt.cm.YlGn, animated=True,vmin=0.0,vmax=1.0)
+                im1, = ax.imshow(b[i],cmap=plt.cm.YlGn, animated=True,vmin=0.0,vmax=1.0)
+                im2, = ax.imshow(w[i],cmap=plt.cm.YlGn, animated=True,vmin=0.0,vmax=1.0)
+                im3, = ax.imshow(h[i],cmap=plt.cm.YlGn, animated=True,vmin=0.0,vmax=1.0)
                 if showtime:
                     ax.set_title(r'$b$ at $t={:4.3f}$'.format(t[i]), fontsize=25)
                 ims.append([im1,im2,im3])
                 cbar_ax2 = fig.add_axes([0.85, 0.35, 0.05, 0.55])
                 fig.colorbar(im1, cax=cbar_ax2)
     ani = animation.ArtistAnimation(fig, ims, interval=50, blit=True, repeat_delay=1000)
-    ani.save('%s.mp4'%fname)
+    if output is None:
+        ani.save('%s.mp4'%fname)
+    elif type(output)==str:
+        ani.save('%s.mp4'%output)
     print "Movie made!"
 
 def image_maker(fname,parameters,file_format="png",only_b=True,title=None):

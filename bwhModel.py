@@ -42,7 +42,7 @@ Es_normal={'rhs':"oz",
         'n':(1024,),
         'l':(256.0,),
         'bc':"neumann",
-        'it':"rk4",
+        'it':"pseudo_spectral",
         'dt':0.1,
         'analyze':True,
         'verbose':True,
@@ -386,7 +386,10 @@ class bwhModel(object):
             print ("Integration time was {} s".format(time.time()-start))
         if savefile is not None and create_movie:
             print ("Creating movie...")
-            hn.create_animation_b(savefile)
+            if type(create_movie)==str:
+                hn.create_animation(savefile,create_movie)
+            else:
+                hn.create_animation(savefile)
         return result[-1]
 
     """ Integrators step functions """
@@ -465,9 +468,9 @@ class bwhModel(object):
             self.fftw=fftn(w)
             self.ffth=fftn(h)
             while t < tout:
-                self.fftb = self.multb*(self.fftb + self.dt*fftn(self.dbdt(b,w,h,t,self.p['p'],self.p['chi'],self.p['a'])))#.real
-                self.fftw = self.multw*(self.fftw + self.dt*fftn(self.dwdt(b,w,h,t,self.p['p'],self.p['chi'],self.p['a'])))#.real
-                self.ffth = self.multh*(self.ffth + self.dt*fftn(self.dhdt(b,w,h,t,self.p['p'],self.p['chi'],self.p['a'])))#.real
+                self.fftb = self.multb*(self.fftb + self.dt*fftn(self.dbdt(b,w,h,t,self.p['p'],self.p['chi'],self.p['a'],self.p['omegaf'])))#.real
+                self.fftw = self.multw*(self.fftw + self.dt*fftn(self.dwdt(b,w,h,t,self.p['p'],self.p['chi'],self.p['a'],self.p['omegaf'])))#.real
+                self.ffth = self.multh*(self.ffth + self.dt*fftn(self.dhdt(b,w,h,t,self.p['p'],self.p['chi'],self.p['a'],self.p['omegaf'])))#.real
                 b= ifftn(self.fftb).real
                 w= ifftn(self.fftw).real
                 h= ifftn(self.ffth).real
