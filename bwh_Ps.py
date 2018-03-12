@@ -62,7 +62,6 @@ def update_par():
     return par
 
 par=update_par()
-par['pc']=par['nuw'] * ( (par['alpha'] * par['f']) + par['nuh'])/ (par['alpha'] * par['f'])
 
 
 def savecsvdimpar(fname,dimpar):
@@ -92,6 +91,7 @@ def loadParmSet(fname):
 
 if __name__ == '__main__':
     par=update_par()
+    par['pc']=par['nuw'] * ( (par['alpha'] * par['f']) + par['nuh'])/ (par['alpha'] * par['f'])
     print "Nondimensional:",
     print par
     saveParmSet('bwh_set1',par,saveroot=False)
