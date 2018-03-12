@@ -1,4 +1,5 @@
 *.pyc
 utilities/*.pyc
+auto/*.hdf5
 *.nc
 *.mp4
