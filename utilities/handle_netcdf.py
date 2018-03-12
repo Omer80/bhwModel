@@ -41,7 +41,7 @@ def setup_simulation(fname,Ps,Es):
         x[:] = np.linspace(0,Es['l'][0], Es['n'][0])
         if len(Es['n']) == 1:
             print "Setting up 1D variables"
-            for var in Es.Vs_symbols:
+            for var in Es['Vs_symbols']:
                 rootgrp.createVariable(str(var), 'f8', ('time', 'x',),zlib=True)
         elif len(Es['n']) == 2:
             print "Setting up 2D variables"
@@ -49,7 +49,7 @@ def setup_simulation(fname,Ps,Es):
             y = rootgrp.createVariable('y', 'f4', ('y',),zlib=True)
             y.units = "m"
             y[:] = np.linspace(0,Es['l'][1], Es['n'][1])
-            for var in Es.Vs_symbols:
+            for var in Es['Vs_symbols']:
                 rootgrp.createVariable(str(var), 'f8', ('time', 'x', 'y',),zlib=True)
         print "Output: netCDF file was created: ", fname+".nc"
 def setup_p_a_scan(fname,Ps,Es,t_range,p_range,a_range):
@@ -170,10 +170,10 @@ def save_sim_snapshot(fname,step,time,Vs,Es):
     with netCDF4.Dataset("%s.nc"%fname, 'a') as rootgrp:
         rootgrp['time'][step] = time
         if len(Es['n']) == 1:
-            for i,var in enumerate(Es.Vs_symbols):
+            for i,var in enumerate(Es['Vs_symbols']):
                 rootgrp[str(var)][step,:] = Vs[i]
         elif len(Es['n']) == 2:
-            for i,var in enumerate(Es.Vs_symbols):
+            for i,var in enumerate(Es['Vs_symbols']):
                 rootgrp[str(var)][step,:,:] = Vs[i]
 
 def movie_maker(fname):
