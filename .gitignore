@@ -1,0 +1,4 @@
+*.pyc
+utilities/*.pyc
+*.nc
+*.mp4

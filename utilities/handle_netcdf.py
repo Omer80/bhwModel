@@ -39,27 +39,18 @@ def setup_simulation(fname,Ps,Es):
         x = rootgrp.createVariable('x', 'f4', ('x',),zlib=True)
         x.units = "m"
         x[:] = np.linspace(0,Es['l'][0], Es['n'][0])
-        rootgrp.createVariable('b1_coverage', 'f8', ('time',),zlib=True)
-        rootgrp.createVariable('b2_coverage', 'f8', ('time',),zlib=True)
-        rootgrp.createVariable('b3_coverage', 'f8', ('time',),zlib=True)
         if len(Es['n']) == 1:
             print "Setting up 1D variables"
-            rootgrp.createVariable('b1', 'f8', ('time', 'x',),zlib=True)
-            rootgrp.createVariable('b2', 'f8', ('time', 'x', ),zlib=True)
-            rootgrp.createVariable('b3', 'f8', ('time', 'x', ),zlib=True)
-            rootgrp.createVariable('s1', 'f8', ('time', 'x', ),zlib=True)
-            rootgrp.createVariable('s2', 'f8', ('time', 'x', ),zlib=True)
+            for var in Es.Vs_symbols:
+                rootgrp.createVariable(str(var), 'f8', ('time', 'x',),zlib=True)
         elif len(Es['n']) == 2:
             print "Setting up 2D variables"
             rootgrp.createDimension("y", Es['n'][1])
             y = rootgrp.createVariable('y', 'f4', ('y',),zlib=True)
             y.units = "m"
             y[:] = np.linspace(0,Es['l'][1], Es['n'][1])
-            rootgrp.createVariable('b1', 'f8', ('time', 'x', 'y',),zlib=True)
-            rootgrp.createVariable('b2', 'f8', ('time', 'x', 'y',),zlib=True)
-            rootgrp.createVariable('b3', 'f8', ('time', 'x', 'y',),zlib=True)
-            rootgrp.createVariable('s1', 'f8', ('time', 'x', 'y',),zlib=True)
-            rootgrp.createVariable('s2', 'f8', ('time', 'x', 'y',),zlib=True)
+            for var in Es.Vs_symbols:
+                rootgrp.createVariable(str(var), 'f8', ('time', 'x', 'y',),zlib=True)
         print "Output: netCDF file was created: ", fname+".nc"
 def setup_p_a_scan(fname,Ps,Es,t_range,p_range,a_range):
     """
@@ -176,24 +167,14 @@ def make_p_a_movie(fname,a,fps=None):
 def save_sim_snapshot(fname,step,time,Vs,Es):
     """ Save snapshot of the four fields b1,b2,b3,s1,s2, together with the time
     """
-    b1,b2,b3,s1,s2 = Vs[0],Vs[1],Vs[2],Vs[3],Vs[4]
     with netCDF4.Dataset("%s.nc"%fname, 'a') as rootgrp:
         rootgrp['time'][step] = time
-        rootgrp['b1_coverage'][step] = float(len(np.argwhere(b1>(np.amax(b1)/2.0))))/float(b1.size)
-        rootgrp['b2_coverage'][step] = float(len(np.argwhere(b2>(np.amax(b2)/2.0))))/float(b2.size)
-        rootgrp['b3_coverage'][step] = float(len(np.argwhere(b3>(np.amax(b3)/2.0))))/float(b3.size)
         if len(Es['n']) == 1:
-            rootgrp['b1'][step,:] = b1
-            rootgrp['b2'][step,:] = b2
-            rootgrp['b3'][step,:] = b3
-            rootgrp['s1'][step,:] = s1
-            rootgrp['s2'][step,:] = s2
+            for i,var in enumerate(Es.Vs_symbols):
+                rootgrp[str(var)][step,:] = Vs[i]
         elif len(Es['n']) == 2:
-            rootgrp['b1'][step,:,:] = b1
-            rootgrp['b2'][step,:,:] = b2
-            rootgrp['b3'][step,:,:] = b3
-            rootgrp['s1'][step,:,:] = s1
-            rootgrp['s2'][step,:,:] = s2
+            for i,var in enumerate(Es.Vs_symbols):
+                rootgrp[str(var)][step,:,:] = Vs[i]
 
 def movie_maker(fname):
     import matplotlib
