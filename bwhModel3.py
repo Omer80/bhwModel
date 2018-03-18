@@ -21,7 +21,7 @@
 #  Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston,
 #  MA 02110-1301, USA.
 """
-from __future__ import print_function
+
 __version__= 1.0
 __author__ = """Omer Tzuk (omertz@post.bgu.ac.il)"""
 import time
@@ -38,7 +38,7 @@ from utilities import handle_netcdf as hn
 import deepdish.io as dd
 #from tlm_parameters import par
 
-Es_normal={'rhs':"tradeoff",
+Es_normal={'rhs':"oz",
         'n':(1024,),
         'l':(256.0,),
         'bc':"neumann",
@@ -98,7 +98,7 @@ class bwhModel(object):
     def set_equations(self):
         t = symbols('t')
         self.Ps_symbols={}
-        for key in self.p.keys():
+        for key in list(self.p.keys()):
             self.Ps_symbols[key] = symbols(key)
         p=self.Ps_symbols
         if self.setup['rhs']=="oz":
@@ -127,20 +127,19 @@ class bwhModel(object):
             from sympy.functions import cos as symcos
             sigma = 100
             g    = (1.0+p['eta']*b)*(1.0+p['eta']*b)
-            evapw = (p['nuw']*w)/(1.0+p['rhow']*b)
-            evaph = (p['nuh']*w)/(1.0+p['rhoh']*b)
+            evap = (p['nu']*w)/(1.0+p['rho']*b)
             midlamb = (p['lamb_max']+p['lamb_min'])/2.0
             self.lamb = p['lamb_max'] + (p['chi']**p['beta']) * (p['lamb_min'] - p['lamb_max'])
             self.gamma= p['gamma']*(self.lamb/midlamb)
             self.mu_s = p['mu_s_max'] + ((1.0-p['chi'])**p['beta']) * (0.0 - p['mu_s_max'])
-            self.mu  = 1.0-self.mu_s*(1.0/(1.0 + sympexp(sigma*(h-(p['w_wp']+p['w_fos'])/2.0))))
+            self.mu  = 1.0-self.mu_s*(1.0/(1.0 + sympexp(sigma*(h-(p['s_wp']+p['s_fos'])/2.0))))
 #            ms   = 0.1+0.9*(1.0/(1.0 + sympexp(-sigma*(h-s_wp))))
             tras = self.gamma*g*w*b
             i    = p['alpha']*((b+p['q']*p['f'])/(b+p['q']))
             self.p_t_eq = p['p']*(1.0+p['a']*symcos(2.0*np.pi*p['omegaf']*t/p['conv_T_to_t']))
-            self.dbdt_eq = self.lamb*g*w*b*(1.0-b)-self.mu*b
-            self.dwdt_eq = i*h-evapw-tras
-            self.dhdt_eq = self.p_t_eq-evaph-i*h
+            self.dbdt_eq  = self.lamb*g*w*b*(1.0-b)-self.mu*b
+            self.dwdt_eq = i*h-evap-tras
+            self.dhdt_eq = self.p_t_eq-i*h
         """ Creating numpy functions """
         symeqs = Matrix([self.dbdt_eq,self.dwdt_eq,self.dhdt_eq])
         self.ode  = lambdify((b,w,h,t,p['p'],p['chi'],p['a'],p['omegaf']),self.sub_parms(symeqs),"numpy",dummify=False)
@@ -223,7 +222,7 @@ class bwhModel(object):
     """ Utilities """
     def sub_parms(self,eqs):
         b,w,h,t = symbols('b w h t')
-        for key in self.p.keys():
+        for key in list(self.p.keys()):
 #            print key
             if key!='p' and key!='chi' and key!='a' and key!='omegaf':
                 eqs=eqs.subs(self.Ps_symbols[key],self.p[key])
@@ -336,7 +335,7 @@ class bwhModel(object):
         return np.max(np.abs(state-previous_state))<tolerance
 
     def update_parameters(self,parameters):
-        intersection=[i for i in self.p.keys() if i in parameters]
+        intersection=[i for i in list(self.p.keys()) if i in parameters]
         if intersection:
             for key in intersection:
                 if self.setup['verbose']:
