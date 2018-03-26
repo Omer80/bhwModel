@@ -27,6 +27,8 @@ __author__ = """Omer Tzuk (omertz@post.bgu.ac.il)"""
 import time
 from sympy import symbols, Matrix,lambdify
 from sympy.utilities.autowrap import ufuncify
+from scipy.optimize import newton_krylov
+from scipy.optimize.nonlin import NoConvergence
 import numpy as np
 import scipy.linalg as linalg
 from scipy.integrate import odeint,ode
@@ -38,11 +40,11 @@ from utilities import handle_netcdf as hn
 import deepdish.io as dd
 #from tlm_parameters import par
 
-Es_normal={'rhs':"tradeoff",
+Es_normal={'rhs':"oz",
         'n':(1024,),
         'l':(256.0,),
-        'bc':"neumann",
-        'it':"pseudo_spectral",
+        'bc':"periodic",
+        'it':"euler",
         'dt':0.1,
         'analyze':True,
         'verbose':True,
@@ -85,7 +87,13 @@ class bwhModel(object):
             self.dt=Es['dt']*self.dx2 / self.p['dh']
             self.X = np.linspace(0,Es['l'][0],Es['n'][0])
             from utilities.laplacian_sparse import create_laplacian #,create_gradient
-            self.lapmat=create_laplacian(self.setup['n'],self.setup['l'], self.setup['bc'] , [1.0,self.p['dw'],self.p['dh']],verbose=self.verbose)
+            if self.setup['rhs']!="oz_relax":
+                self.lapmat=create_laplacian(self.setup['n'],self.setup['l'], self.setup['bc'] , [1.0,self.p['dw'],self.p['dh']],verbose=self.verbose)
+            elif self.setup['rhs']=="oz_relax":
+                self.lapmat_b=create_laplacian(self.setup['n'],self.setup['l'], self.setup['bc'],[1.0],verbose=self.verbose)
+                self.lapmat_w=create_laplacian(self.setup['n'],self.setup['l'], self.setup['bc'],[self.p['dw']],verbose=self.verbose)
+                self.lapmat_h=create_laplacian(self.setup['n'],self.setup['l'], self.setup['bc'],[self.p['dh']],verbose=self.verbose)
+                self.dt=Es['dt']*self.dx2 / self.p['dw']
 #            self.gradmat=create_gradient(self.setup['n'],self.setup['l'], self.setup['bc'] , [1.0,self.p['Dw'],self.p['Dh']])
             self.set_integrator()
             if self.verbose:
@@ -117,6 +125,22 @@ class bwhModel(object):
             self.dbdt_eq = p['lamb_max']*g*w*b*(1.0-b)-b
             self.dwdt_eq = i*h-evapw-tras
             self.dhdt_eq = self.p_t_eq-evaph-i*h
+        elif self.setup['rhs']=="oz_relax":
+            """ Ms version tradeoff of Lambda with Ms AND Gamma
+            """
+            b,w,h = symbols('b w h')
+            self.setup['Vs_symbols'] = b,w,h
+            self.setup['nvar']=len(self.setup['Vs_symbols'])
+            from sympy.functions import cos as symcos
+            g    = (1.0+p['eta']*b)*(1.0+p['eta']*b)
+            evapw = (p['nuw']*w)/(1.0+p['rhow']*b)
+            evaph = (p['nuh']*w)/(1.0+p['rhoh']*b)
+            tras = p['gamma']*g*w*b
+            i    = p['alpha']*((b+p['q']*p['f'])/(b+p['q']))
+            self.p_t_eq = p['p']*(1.0+p['a']*symcos(2.0*np.pi*p['omegaf']*t/p['conv_T_to_t']))
+            self.dbdt_eq = p['lamb_max']*g*w*b*(1.0-b)-b
+            self.dwdt_eq = i*h-evapw-tras
+            self.dhdt_eq = -evaph-i*h
         elif self.setup['rhs']=="tradeoff":
             """ Ms version tradeoff of Lambda with Ms AND Gamma 
             """
@@ -147,6 +171,10 @@ class bwhModel(object):
         self.dbdt = ufuncify([b,w,h,t,p['p'],p['chi'],p['a'],p['omegaf']],[self.sub_parms(self.dbdt_eq)])
         self.dwdt = ufuncify([b,w,h,t,p['p'],p['chi'],p['a'],p['omegaf']],[self.sub_parms(self.dwdt_eq)])
         self.dhdt = ufuncify([b,w,h,t,p['p'],p['chi'],p['a'],p['omegaf']],[self.sub_parms(self.dhdt_eq)])
+        if self.setup['rhs']=="oz_relax":
+            def dhdt_p_loc(b,w,h,t,p,chi,a,omegaf):
+                return p+self.dhdt(b,w,h,t,p,chi,a,omegaf)
+            self.dhdt_p=dhdt_p_loc
         localJac   = symeqs.jacobian(Matrix([b,w,h]))
         self.sym_localJac = localJac
         self.localJac = lambdify((b,w,h,t,p['p'],p['chi'],p['a'],p['omegaf']),self.sub_parms(localJac),"numpy",dummify=False)
@@ -173,6 +201,8 @@ class bwhModel(object):
             if self.setup['setPDE'] and self.setup['analyze']:
                 print ("Linear analysis Jacobian: ", jaclinanalysis)
 
+    def p_t(self,t):
+        return self.p['p']
     """ Printing and parameters related functions """
     def print_parameters(self):
         print (self.p)
@@ -185,11 +215,16 @@ class bwhModel(object):
             print ("dbdt = ", self.dbdt_eq)
             print ("dwdt = ", self.dwdt_eq)
             print ("dhdt = ", self.dhdt_eq)
-    def print_latex_equations(self):
+    def print_latex_equations(self,numeric=False):
         from sympy import latex
-        print ("\partial_t b = ",latex(self.dbdt_eq))
-        print ("\partial_t w = ",latex(self.dwdt_eq))
-        print ("\partial_t h = ",latex(self.dhdt_eq))
+        if numeric:
+            print ("\partial_t b = ",latex(self.sub_parms(self.dbdt_eq)))
+            print ("\partial_t w = ",latex(self.sub_parms(self.dwdt_eq)))
+            print ("\partial_t h = ",latex(self.sub_parms(self.dhdt_eq)))
+        else:
+            print ("\partial_t b = ",latex(self.dbdt_eq))
+            print ("\partial_t w = ",latex(self.dwdt_eq))
+            print ("\partial_t h = ",latex(self.dhdt_eq))
     """ Functions for use with scipy methods """
     def local(self,u ,t=0):
         b,w,h = u[0],u[1],u[2]
@@ -231,23 +266,62 @@ class bwhModel(object):
 
     """ Spatial functions """
     def set_integrator(self):
-        integrator_type = {}
-        integrator_type['scipy'] = self.scipy_integrate
-        integrator_type['euler'] = self.euler_integrate
-        integrator_type['rk4'] = self.rk4_integrate
-        integrator_type['pseudo_spectral'] = self.pseudo_spectral_integrate
-        try:
-            self.integrator = integrator_type[self.setup['it']]
-        except KeyError:
-            raise  ValueError("No such integrator : %s."%self.setup['it'])
-        if self.setup['it']=='pseudo_spectral':
-            self.dt*=100.0
+        if self.setup['rhs']!="oz_relax":
+            integrator_type = {}
+            integrator_type['scipy'] = self.scipy_integrate
+            integrator_type['euler'] = self.euler_integrate
+            integrator_type['rk4'] = self.rk4_integrate
+            integrator_type['pseudo_spectral'] = self.pseudo_spectral_integrate
+            try:
+                self.integrator = integrator_type[self.setup['it']]
+            except KeyError:
+                raise  ValueError("No such integrator : %s."%self.setup['it'])
+            if self.setup['it']=='pseudo_spectral':
+                self.dt*=100.0
+        elif self.setup['rhs']=="oz_relax":
+            integrator_type = {}
+            integrator_type['scipy'] = self.scipy_integrate_relax
+            integrator_type['euler'] = self.euler_integrate_relax
+            integrator_type['rk4'] = self.rk4_integrate_relax
+            integrator_type['pseudo_spectral'] = self.pseudo_spectral_integrate_relax
+            try:
+                self.integrator = integrator_type[self.setup['it']]
+            except KeyError:
+                raise  ValueError("No such integrator : %s."%self.setup['it'])
+            if self.setup['it']=='pseudo_spectral':
+                self.dt*=100.0
 
     def rhs_pde(self,state,t=0):
         b,w,h=np.split(state,self.setup['nvar'])
-        return np.ravel((self.dbdt(b,w,h,t,self.p['p'],self.p['chi'],self.p['a'],self.p['omegaf']),
-                         self.dwdt(b,w,h,t,self.p['p'],self.p['chi'],self.p['a'],self.p['omegaf']),
-                         self.dhdt(b,w,h,t,self.p['p'],self.p['chi'],self.p['a'],self.p['omegaf']))) + self.lapmat*state
+        return np.ravel((self.dbdt(b,w,h,t,self.p['p'],self.p['chi'],
+                                   self.p['a'],self.p['omegaf']),
+                         self.dwdt(b,w,h,t,self.p['p'],self.p['chi'],
+                                   self.p['a'],self.p['omegaf']),
+                         self.dhdt(b,w,h,t,self.p['p'],self.p['chi'],
+                                   self.p['a'],self.p['omegaf']))) + self.lapmat*state
+    
+    def rhs_pde_relax(self,state):
+        b,w,h=np.split(state,self.setup['nvar'])
+        return np.ravel((self.dbdt(b,w,h,self.t,self.p['p'],self.p['chi'],
+                                   self.p['a'],self.p['omegaf']),
+                         self.dwdt(b,w,h,self.t,self.p['p'],self.p['chi'],
+                                   self.p['a'],self.p['omegaf']))) + self.lapmat*np.ravel((b,w))
+    
+    def rhs_h_eq_relax(self,h):
+        return np.ravel((self.dhdt_p(self.b,self.w,h,self.time_elapsed,
+                                     self.p_t(self.time_elapsed),self.p['chi'],
+                                     self.p['a'],self.p['omegaf']))) + self.lapmat_h*(h**2)
+
+    def relax_h(self,h,fixiter=3,tol=6e-6,smaxiter=6):
+        """ """
+        try:
+            h = newton_krylov(self.rhs_h_eq_relax,h,iter=fixiter, method='lgmres', verbose=0,f_tol=tol,maxiter=max(fixiter+1,smaxiter))
+            converged=True
+        except NoConvergence:
+            converged=False
+            if self.setup['verbose']:
+                print("No Convergence flag")
+        return h,converged
     
     def rhs_pde_nonlindiff(self,state,t=0):
         b,w,h=np.split(state,self.setup['nvar'])
@@ -400,6 +474,12 @@ class bwhModel(object):
         t = np.arange(0,finish+step, step)
         self.time_elapsed+=finish
         return t,odeint(self.rhs_pde, initial_state, t)
+    def scipy_integrate_relax(self,initial_state,step=0.1,finish=1000):
+        """ """
+#        print "Integration using scipy odeint"
+        t = np.arange(0,finish+step, step)
+        self.time_elapsed+=finish
+        return t,odeint(self.rhs_pde, initial_state, t)
     def ode_integrate_bdf(self,initial_state=None,step=0.1,start=0,finish=1000,
                           max_dt=10.0e-3,max_order=15,**kwargs):
         if kwargs:
@@ -421,8 +501,53 @@ class bwhModel(object):
         t = np.arange(start,finish+step, step)
         return t,odeint(self.rhs_ode,initial_state, t).T
 
-    def euler_integrate(self,initial_state,step=0.1,finish=1000):
+    def euler_integrate(self,initial_state=None,step=0.1,finish=1000,**kwargs):
         """ """
+        if kwargs:
+            self.update_parameters(kwargs)
+        if initial_state is None:
+            initial_state=self.state            
+        time = np.arange(0,finish+step,step)
+        result=np.zeros((len(time),len(initial_state)))
+        t=0
+        result[0]=initial_state
+        for i,tout in enumerate(time[1:]):
+            old=result[i]
+            while t < tout:
+                new=old+self.dt*self.rhs_pde(old,self.time_elapsed)
+                old=new
+                t+=self.dt
+                self.time_elapsed+=self.dt
+            result[i+1]=old
+        self.state=result[-1]
+        return t,result
+    def euler_integrate_relax(self,initial_state=None,step=0.1,finish=1000,**kwargs):
+        """ """
+        if kwargs:
+            self.update_parameters(kwargs)
+        if initial_state is None:
+            initial_state=self.state            
+        time = np.arange(0,finish+step,step)
+        result=np.zeros((len(time),len(initial_state)))
+        t=0
+        result[0]=initial_state
+        for i,tout in enumerate(time[1:]):
+            old=result[i]
+            while t < tout:
+                # Need to Euler update ONLY b and w fields
+                b,w,h=self.split_state(self.state)
+                self.b=b+self.dt*(self.dbdt(b,w,h,t,self.p['p'],self.p['chi'],self.p['a'],self.p['omegaf'])+self.lapmat_b*b)
+                self.w=w+self.dt*(self.dwdt(b,w,h,t,self.p['p'],self.p['chi'],self.p['a'],self.p['omegaf'])+self.lapmat_w*w)
+                self.h,flag=self.relax_h(h)
+                self.state=np.ravel((self.b,self.w,self.h))
+                t+=self.dt
+                self.time_elapsed+=self.dt
+            result[i+1]=old
+        self.state=result[-1]
+        return t,result
+    def rk4_integrate(self,initial_state,step=0.1,finish=1000):
+        """ """
+#        print "Integration using rk4 step"
         time = np.arange(0,finish+step,step)
         result=[]
         t=0
@@ -430,13 +555,17 @@ class bwhModel(object):
         for tout in time[1:]:
             old=result[-1]
             while t < tout:
-#                print "t=",t
-                new=old+self.dt*self.rhs_pde(old)
-                old=new
+                k1=self.dt*self.rhs_pde(old,self.time_elapsed)
+                k2=self.dt*self.rhs_pde(old+0.5*k1,self.time_elapsed)
+                k3=self.dt*self.rhs_pde(old+0.5*k2,self.time_elapsed)
+                k4=self.dt*self.rhs_pde(old+k3,self.time_elapsed)
+                self.state=old+(1.0/6.0)*(k1+2.0*k2+2.0*k3+k4)
+                old=self.state
                 t+=self.dt
+                self.time_elapsed+=self.dt
             result.append(old)
-        return t,result
-    def rk4_integrate(self,initial_state,step=0.1,finish=1000):
+        return time,result
+    def rk4_integrate_relax(self,initial_state,step=0.1,finish=1000):
         """ """
 #        print "Integration using rk4 step"
         time = np.arange(0,finish+step,step)
@@ -457,6 +586,31 @@ class bwhModel(object):
             result.append(old)
         return time,result
     def pseudo_spectral_integrate(self,initial_state,step=0.1,finish=1000):
+#        print "Integration using pseudo-spectral step"
+        time = np.arange(0,finish+step,step)
+        result=[]
+        t=0
+        result.append(initial_state)
+        for tout in time[1:]:
+            self.state=result[-1]
+            b,w,h=self.state.reshape(self.setup['nvar'],*self.setup['n'])
+            self.fftb=fftn(b)
+            self.fftw=fftn(w)
+            self.ffth=fftn(h)
+            while t < tout:
+                self.fftb = self.multb*(self.fftb + self.dt*fftn(self.dbdt(b,w,h,t,self.p['p'],self.p['chi'],self.p['a'],self.p['omegaf'])))#.real
+                self.fftw = self.multw*(self.fftw + self.dt*fftn(self.dwdt(b,w,h,t,self.p['p'],self.p['chi'],self.p['a'],self.p['omegaf'])))#.real
+                self.ffth = self.multh*(self.ffth + self.dt*fftn(self.dhdt(b,w,h,t,self.p['p'],self.p['chi'],self.p['a'],self.p['omegaf'])))#.real
+                b= ifftn(self.fftb).real
+                w= ifftn(self.fftw).real
+                h= ifftn(self.ffth).real
+                t+=self.dt
+                self.time_elapsed+=self.dt
+            self.state=np.ravel((b,w,h))
+            self.sim_step+=1
+            result.append(self.state)
+        return time,result
+    def pseudo_spectral_integrate_relax(self,initial_state,step=0.1,finish=1000):
 #        print "Integration using pseudo-spectral step"
         time = np.arange(0,finish+step,step)
         result=[]
