@@ -40,7 +40,7 @@ from utilities import handle_netcdf as hn
 import deepdish.io as dd
 #from tlm_parameters import par
 
-Es_normal={'rhs':"oz",
+Es_normal={'rhs':"oz_relax",
         'n':(1024,),
         'l':(256.0,),
         'bc':"periodic",
@@ -312,10 +312,12 @@ class bwhModel(object):
                                      self.p_t(self.time_elapsed),self.p['chi'],
                                      self.p['a'],self.p['omegaf']))) + self.lapmat_h*(h**2)
 
-    def relax_h(self,h,fixiter=3,tol=6e-6,smaxiter=6):
+    def relax_h(self,h,maxiter=10,verbose=0):
         """ """
         try:
-            h = newton_krylov(self.rhs_h_eq_relax,h,iter=fixiter, method='lgmres', verbose=0,f_tol=tol,maxiter=max(fixiter+1,smaxiter))
+            h = newton_krylov(self.rhs_h_eq_relax,h,
+                              method='lgmres',verbose=verbose,
+                              f_tol=1e-2,maxiter=maxiter)
             converged=True
         except NoConvergence:
             converged=False
@@ -528,22 +530,25 @@ class bwhModel(object):
         if initial_state is None:
             initial_state=self.state            
         time = np.arange(0,finish+step,step)
+        self.b,self.w,self.h=self.split_state(initial_state)
+        self.h,flag=self.relax_h(self.h,maxiter=1000,verbose=1)
+        self.state=np.ravel((self.b,self.w,self.h))
         result=np.zeros((len(time),len(initial_state)))
         t=0
         result[0]=initial_state
         for i,tout in enumerate(time[1:]):
-            old=result[i]
+            self.state=result[i]
             while t < tout:
                 # Need to Euler update ONLY b and w fields
                 b,w,h=self.split_state(self.state)
                 self.b=b+self.dt*(self.dbdt(b,w,h,t,self.p['p'],self.p['chi'],self.p['a'],self.p['omegaf'])+self.lapmat_b*b)
                 self.w=w+self.dt*(self.dwdt(b,w,h,t,self.p['p'],self.p['chi'],self.p['a'],self.p['omegaf'])+self.lapmat_w*w)
-                self.h,flag=self.relax_h(h)
+                self.h,flag=self.relax_h(h,verbose=0)
                 self.state=np.ravel((self.b,self.w,self.h))
                 t+=self.dt
                 self.time_elapsed+=self.dt
-            result[i+1]=old
-        self.state=result[-1]
+            result[i+1]=self.state
+#        self.state=result[-1]
         return t,result
     def rk4_integrate(self,initial_state,step=0.1,finish=1000):
         """ """
