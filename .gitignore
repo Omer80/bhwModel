@@ -23,8 +23,6 @@ auto/*.exe
 auto/*.o
 *.aux
 *.idx
-auto/*.c
-auto/c.*
 *.hdf5
 auto/*.hdf5
 auto/fort*.*

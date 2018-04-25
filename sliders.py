@@ -11,7 +11,7 @@ import numpy as np
 
 
 
-Ps_normal='auto/bwh_set1.hdf5'
+Ps_normal='auto/bwh_set2.hdf5'
 Es_normal={'rhs':"oz",
         'n':(1024,),
         'l':(256.0,),
