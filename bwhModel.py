@@ -31,7 +31,7 @@ from scipy.optimize import newton_krylov
 from scipy.optimize.nonlin import NoConvergence
 import numpy as np
 import scipy.linalg as linalg
-from scipy.integrate import odeint,ode
+from scipy.integrate import odeint,solve_ivp
 from scipy.fftpack import fftn, ifftn
 import scipy.sparse as sparse
 #import netCDF4 as netcdf
@@ -40,7 +40,7 @@ from utilities import handle_netcdf as hn
 import deepdish.io as dd
 #from tlm_parameters import par
 
-Es_normal={'rhs':"oz_relax",
+Es_normal={'rhs':"oz",
         'n':(1024,),
         'l':(256.0,),
         'bc':"periodic",
@@ -53,7 +53,7 @@ Es_normal={'rhs':"oz_relax",
 def main():
     global m,p
     m = bwhModel(Es=Es_normal,Ps='auto/bwh_set1.hdf5',Vs="random")
-    return 0
+    return m
 
 class bwhModel(object):
     def __init__(self,Ps,Es,Vs=None):
@@ -72,15 +72,15 @@ class bwhModel(object):
         self.dt = 0.1
         self.time_elapsed = 0
         if self.setup['setPDE']:
-            self.p['nd']=len(Es['n'])
-            if self.p['nd']==2:
+            self.setup['nd']=len(Es['n'])
+            if self.setup['nd']==2:
                 self.p['nx'],self.p['ny']=Es['n']
                 self.p['lx'],self.p['ly']=Es['l']
                 self.l=[self.p['lx'],self.p['ly']]
                 self.n=[self.p['nx'],self.p['ny']]
                 self.dg  = tuple([l/float(n) for l,n in zip(self.l,self.n)])
                 self.dx  = self.dg[0]
-            elif self.p['nd']==1:
+            elif self.setup['nd']==1:
                 self.dg=[Es['l'][0]/float(Es['n'][0])]
                 self.dx=self.dg[0]
             self.dx2 = self.dx**2
@@ -113,6 +113,7 @@ class bwhModel(object):
             """ Ms version tradeoff of Lambda with Ms AND Gamma
             """
             b,w,h = symbols('b w h')
+            self.Vs_symbols = [b,w,h]
             self.setup['Vs_symbols'] = b,w,h
             self.setup['nvar']=len(self.setup['Vs_symbols'])
             from sympy.functions import cos as symcos
@@ -129,6 +130,7 @@ class bwhModel(object):
             """ Ms version tradeoff of Lambda with Ms AND Gamma
             """
             b,w,h = symbols('b w h')
+            self.Vs_symbols = [b,w,h]
             self.setup['Vs_symbols'] = b,w,h
             self.setup['nvar']=len(self.setup['Vs_symbols'])
             from sympy.functions import cos as symcos
@@ -157,7 +159,7 @@ class bwhModel(object):
             self.lamb = p['lamb_max'] + (p['chi']**p['beta']) * (p['lamb_min'] - p['lamb_max'])
             self.gamma= p['gamma']*(self.lamb/midlamb)
             self.mu_s = p['mu_s_max'] + ((1.0-p['chi'])**p['beta']) * (0.0 - p['mu_s_max'])
-            self.mu  = 1.0-self.mu_s*(1.0/(1.0 + sympexp(sigma*(h-(p['w_wp']+p['w_fos'])/2.0))))
+            self.mu  = 1.0-self.mu_s*(1.0/(1.0 + sympexp(sigma*(w-(p['w_wp']+p['w_fos'])/2.0))))
 #            ms   = 0.1+0.9*(1.0/(1.0 + sympexp(-sigma*(h-s_wp))))
             tras = self.gamma*g*w*b
             i    = p['alpha']*((b+p['q']*p['f'])/(b+p['q']))
@@ -166,8 +168,8 @@ class bwhModel(object):
             self.dwdt_eq = i*h-evapw-tras
             self.dhdt_eq = self.p_t_eq-evaph-i*h
         """ Creating numpy functions """
-        symeqs = Matrix([self.dbdt_eq,self.dwdt_eq,self.dhdt_eq])
-        self.ode  = lambdify((b,w,h,t,p['p'],p['chi'],p['a'],p['omegaf']),self.sub_parms(symeqs),"numpy",dummify=False)
+        self.symeqs = Matrix([self.dbdt_eq,self.dwdt_eq,self.dhdt_eq])
+        self.ode  = lambdify((b,w,h,t,p['p'],p['chi'],p['a'],p['omegaf']),self.sub_parms(self.symeqs),"numpy",dummify=False)
         self.dbdt = ufuncify([b,w,h,t,p['p'],p['chi'],p['a'],p['omegaf']],[self.sub_parms(self.dbdt_eq)])
         self.dwdt = ufuncify([b,w,h,t,p['p'],p['chi'],p['a'],p['omegaf']],[self.sub_parms(self.dwdt_eq)])
         self.dhdt = ufuncify([b,w,h,t,p['p'],p['chi'],p['a'],p['omegaf']],[self.sub_parms(self.dhdt_eq)])
@@ -175,7 +177,7 @@ class bwhModel(object):
             def dhdt_p_loc(b,w,h,t,p,chi,a,omegaf):
                 return p+self.dhdt(b,w,h,t,p,chi,a,omegaf)
             self.dhdt_p=dhdt_p_loc
-        localJac   = symeqs.jacobian(Matrix([b,w,h]))
+        localJac   = self.symeqs.jacobian(Matrix([b,w,h]))
         self.sym_localJac = localJac
         self.localJac = lambdify((b,w,h,t,p['p'],p['chi'],p['a'],p['omegaf']),self.sub_parms(localJac),"numpy",dummify=False)
         if self.setup['setPDE'] and self.setup['analyze']:
@@ -338,7 +340,7 @@ class bwhModel(object):
         return self.ode(b,w,h,t,self.p['p'],self.p['chi'],self.p['a'],self.p['omegaf']).T[0]
     def scipy_ode_rhs(self,t,state):
         b,w,h=state
-        return self.ode(b,w,h,t,self.p['p'],self.p['chi'],self.p['a'],self.p['omegaf'])
+        return np.squeeze(self.ode(b,w,h,t,self.p['p'],self.p['chi'],self.p['a'],self.p['omegaf']))
     def scipy_ode_jac(self,t,state):
         b,w,h=state
         return self.localJac(b,w,h,t,self.p['p'],self.p['chi'],self.p['a'],self.p['omegaf'])
@@ -482,21 +484,19 @@ class bwhModel(object):
         t = np.arange(0,finish+step, step)
         self.time_elapsed+=finish
         return t,odeint(self.rhs_pde, initial_state, t)
-    def ode_integrate_bdf(self,initial_state=None,step=0.1,start=0,finish=1000,
-                          max_dt=10.0e-3,max_order=15,**kwargs):
+    def ode_integrate(self,initial_state,step=0.1,start=0,finish=1000,
+                          method='BDF',**kwargs):
+        """ Using the new scipy interface to BDF method for stiff equations
+        with option to switch to other methods
+        """
         if kwargs:
             self.update_parameters(kwargs)
-        r = ode(self.scipy_ode_rhs, self.scipy_ode_jac).set_integrator('lsoda',max_step=max_dt, method='bdf', max_order_s=max_order)
-        r.set_initial_value(initial_state, 0)
-        t = []
-        result = []
-        t.append(start)
-        result.append(initial_state)
-        while r.successful() and r.t < finish:
-            t.append(r.t+step)
-            result.append(r.integrate(r.t+step))
-        return np.array(t),np.array(result).T
-    def ode_integrate(self,initial_state,step=0.1,start=0,finish=1000,**kwargs):
+        t = np.arange(start,finish+step, step)
+        sol=solve_ivp(fun=self.scipy_ode_rhs,t_span=(start,finish),
+                      y0=initial_state,method=method,
+                      t_eval=t,jac=self.scipy_ode_jac)
+        return sol.t,sol.y
+    def ode_integrate_old(self,initial_state,step=0.1,start=0,finish=1000,**kwargs):
         """ """
         if kwargs:
             self.update_parameters(kwargs)

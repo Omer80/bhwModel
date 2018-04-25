@@ -94,7 +94,7 @@ if __name__ == '__main__':
     par['pc']=par['nuw'] * ( (par['alpha'] * par['f']) + par['nuh'])/ (par['alpha'] * par['f'])
     print "Nondimensional:",
     print par
-    saveParmSet('bwh_set1',par,saveroot=False)
+    saveParmSet('bwh_set2',par,saveroot=False)
 #    import numpy as np
 #    p=par
 #    a = np.array([p['lamb_max'],p['lamb_min'],p['eta'],
