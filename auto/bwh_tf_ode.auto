@@ -1,0 +1,16 @@
+#===============
+# AUTO FHN
+#===============
+
+tf = run(e='bwh_tf_ode',c='bwh_tf_ode',NMX=20000,NPR=2500,DSMAX=0.00111,DS=0.0002)
+
+tb = run(e='bwh_tf',c='bwh_tf',NMX=20000,NPR=2500,DSMAX=0.00171,IPS=1,ISP=2,DS=-0.0002,IPLT=13,ICP=ICP1)
+
+thb = run(tf('HB1'), IPS=2, ISP = 1,NPR=500,NMX=2000,DSMAX=0.005)
+
+onl = run(thb('LP1'),NPR=50,NMX=200,DSMAX=0.02,ICP=ICP2,UZR={'L':[20,30,40,50,60,70,80],-11:900})
+
+iso1 = run(onl('UZ1'),NPR=50,NMX=300,DSMAX=0.048,ICP=ICP1)
+
+plot(tf+tb+thb)
+wait()

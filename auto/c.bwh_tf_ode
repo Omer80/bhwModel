@@ -1,11 +1,11 @@
 # Constants File OZ circles model
-unames = {1:'B', 2:'W', 3:'H',4:'Bx',5:'Wx',6:'Hx'}
+unames = {1:'B', 2:'W', 3:'H'}
 parnames = {1:'eta', 2:'nuw', 3:'nuh', 4:'rhow', 5:'rhoh', 6:'gamma',
             7:'alpha', 8:'q',9:'f',11:'L',16:'p', 17:'delw', 18:'delh',
             20:'lamb_min',21::'lamb_max',22:'mu_s_max',23:'w_wp',
             24:'w_fos',25:'beta',26:'chi'}
-NDIM = 6,   IPS = 1, IRS = 0, ILP = 1
-ICP  = ['p',13]
+NDIM = 3,   IPS = 1, IRS = 0, ILP = 1
+ICP  = ['p']
 NTST = 800, NCOL = 4, IAD = 3, ISP = 2, ISW = 1, IPLT = 1, NBC = 4, NINT = 0
 NMX = 500, RL0 = -100.0, RL1 = 2000.0, A0 = -0.01, A1 = 1000.0  
 NPR = 500, MXBF =  10, IID = 2, ITMX = 24, ITNW = 15, NWTN = 9, JAC = 0

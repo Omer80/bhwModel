@@ -13,20 +13,21 @@ from auto import run,merge,rl,plot
 import numpy as np
 import deepdish.io as dd
 
-def plotChi(chi=[0.0,0.5,1.0],model='bwh_tf',parset='bwh_set2',pmax=10.0):
-    chi02,ps2 = scanBif(chi=chi[0],parset=parset,pmax=pmax,model=model)
-    chi05,ps5 = scanBif(chi=chi[1],parset=parset,pmax=pmax,model=model)
-    chi07,ps7 = scanBif(chi=chi[2],parset=parset,pmax=pmax,model=model)
+def plotChi(chi=[0.0,0.5,1.0],
+            model='bwh_tf',parset='bwh_set2',
+            pmax=10.0,DS=0.0002):
+    chi02,ps2 = scanBif(chi=chi[0],parset=parset,pmax=pmax,model=model,DS=DS)
+    chi05,ps5 = scanBif(chi=chi[1],parset=parset,pmax=pmax,model=model,DS=DS)
+    chi07,ps7 = scanBif(chi=chi[2],parset=parset,pmax=pmax,model=model,DS=DS)
     plot(chi02+chi05+chi07)
     return [chi02,chi05,chi07],[ps2,ps5,ps7]
 
-def scanBif(chi=0.5,beta=1.0,a=0,omegaf=1.0,
+def scanBif(chi=0.0,a=0,omegaf=1.0,
             NMX=2000,NPR=1000,DSMAX=0.0113,DS=0.0002,pmax=10.0,
             model='bwh_tf',parset='bwh_set2'):
     """ Loads parameters from parset hdf5 dictionary file, save in parameters txt file and perform continuation """
     p = loadparset(parset)
     p['chi']=chi
-    p['beta']=beta
     p['a']=a
     p['omegaf']=omegaf
     a = conv_dict_to_parset_array(p)
@@ -34,10 +35,9 @@ def scanBif(chi=0.5,beta=1.0,a=0,omegaf=1.0,
     bif = run(e=model,c=model,NMX=NMX,NPR=NPR,DSMAX=DSMAX,DS=DS,RL1 = pmax)
     return bif,p
 
-def integrate(ic,p,chi=0.5,beta=1.0,a=0,omegaf=1.0,NMX=10000,NPR=100,DSMAX=0.0113,DS=0.0002,Tmax=10000.0,model='tlm',parset='tlm_set10'):
+def integrate(ic,p,chi=0.0,a=0,omegaf=1.0,NMX=10000,NPR=100,DSMAX=0.0113,DS=0.0002,Tmax=10000.0,model='tlm',parset='tlm_set10'):
     p = loadparset(parset)
     p['chi']=chi
-    p['beta']=beta
     p['a']=a
     p['omegaf']=omegaf
     a = conv_dict_to_parset_array(p)
@@ -48,7 +48,7 @@ def integrate(ic,p,chi=0.5,beta=1.0,a=0,omegaf=1.0,NMX=10000,NPR=100,DSMAX=0.011
 
 
 
-def saveBif(bif,fname="tlm_bif",Ps=None):
+def saveBif(bif,fname="bwh_tf_bif",Ps=None):
     import deepdish as dd
     continuation=[]
     for i,branch in enumerate(bif):
