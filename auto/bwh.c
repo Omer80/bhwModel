@@ -22,9 +22,7 @@ int func (integer ndim, const doublereal *u, const integer *icp,
   doublereal dummy_b,dummy_w, dummy_j;
   doublereal eta, nuw, nuh, rhow, rhoh, gam, alpha, q,ff,p, delw, delh;
   doublereal pi, num_periods,L,powH;
-  doublereal G,I,tras,evapw,evaph,sigma;
-  doublereal chi,beta,gamma_tf,mu_s;
-  doublereal w_wp,w_fos,mu_s_max,mu,midlamb,lamb_max,lamb_min,lamb;
+  doublereal e1,e2,e3;
   pi = atan(1.) * 4.0;  
   /* Defining the parameters */
  
@@ -44,13 +42,6 @@ int func (integer ndim, const doublereal *u, const integer *icp,
   delw  = par[17+F2C];
   delh  = par[18+F2C];
   powH  = par[19+F2C];
-  lamb_min=par[20+F2C];
-  lamb_max=par[21+F2C];
-  mu_s_max=par[22+F2C];
-  w_wp=par[23+F2C];
-  w_fos=par[24+F2C];
-  beta=par[25+F2C];
-  chi=par[26+F2C];
 
   //num_periods = par[17+F2C];
   L     = 1; //    = par[18+F2C];
@@ -64,32 +55,22 @@ int func (integer ndim, const doublereal *u, const integer *icp,
   Bx     = u[3];  // x stands for space derivative
   Wx     = u[4];
   Hx     = u[5];
-  
-  sigma=100;
-  midlamb = (lamb_max+lamb_min)/2.0;
-  lamb = lamb_max + pow(chi,beta) * (lamb_min - lamb_max);
-  mu_s = mu_s_max + pow((1.0-chi),beta) * (0.0 - mu_s_max);
-  mu   = 1.0-mu_s*(1.0/(1.0 + exp(sigma*(W-(w_wp+w_fos)/2.0))));
-  gamma_tf = gam*(lamb/midlamb);
-  G = W*(1 + eta*B)*(1 + eta*B);
-  I = (alpha*((B + q*ff)/(B + q)));
-  evapw = ((nuw)/(1 + rhow*B))*W;
-  evaph = ((nuh)/(1 + rhoh*B))*H;
-  tras  = gamma_tf*B*G;
  
 
   // f[i] = u[i]_x
   // We multiply by L because the derivatives are relative to "AUTO"s space.
   // x_real = [0,L], and x_auto = [0,1]. Therefore x_real = L * x_auto
   // d/dx_auto = L * d/dx_real
-  f[0]=L*Bx;
-  f[1]=L*Wx;
-  f[2]=L*Hx;
+  f[0] = L * Bx;
+  f[1] = L * Wx;
+  f[2] = L * Hx;
   powH=2;
-  f[3]=-L*(lamb*G*B*(1-B) - B + dummy_b*Bx) ;
-  f[4]=-L*(1/delw)*(I*H - evapw - tras + (dummy_b+dummy_w)*Wx) ;
-  f[5]=-L*(1/(delh*powH*pow(H,(powH-1))))*(p - I*H - evaph + (delh*powH*(powH-1)*pow(H,(powH-2))*Hx*Hx) + (dummy_b+dummy_j)*Hx);
-  
+  f[3] = -L * (W*pow((1 + eta*B),2)*B*(1-B) - B + dummy_b * Bx) ;//+ dummy_b * Bx;
+  f[4] = -L * (1/delw)*((alpha*((B + q*ff)/(B + q)))*H - ((nuw)/(1 + rhow*B))*W - (gam*B*pow((1 + eta*B),2))*W + (dummy_b + dummy_w)  * Wx) ;//+ (dummy_b + dummy_w)  * Wx;
+  f[5] = -L * (1/(delh * powH * pow(H, (powH - 1))))*(p - (alpha*((B + q*ff)/(B + q))) * H - ((nuh)/(1 + rhoh*B)) * H + (delh * powH * (powH - 1) * pow(H, (powH - 2))* Hx*Hx)  + (dummy_b + dummy_j) * Hx);// + (dummy_b + dummy_j) * Hx;
+  //f[4] = -L * (1/delw)*((alpha*((B + q*ff)/(B + q)))*H - ((nuw)*(1 - rhow*B))*W - (gam*B*pow((1 + eta*B),2))*W + (dummy_b + dummy_w)  * Wx) ;//+ (dummy_b + dummy_w)  * Wx;
+  //f[5] = -L * (1/(delh * powH * pow(H, (powH - 1))))*(p - (alpha*((B + q*ff)/(B + q))) * H - ((nuh)*(1 - rhoh*B)) * H + (delh * powH * (powH - 1) * pow(H, (powH - 2))* Hx*Hx)  + (dummy_b + dummy_j) * Hx);// + (dummy_b + dummy_j) * Hx;
+  //f[5] = -L * (1/(delh))*(p - (alpha*((B + q*ff)/(B + q))) * H - ((nuh)/(1 + rhoh*B)) * H  ) ;//+ (dummy_b + dummy_j) * Hx;
  
   return 0;
 }
@@ -104,27 +85,76 @@ int stpnt (integer ndim, doublereal x,
   doublereal E, K, M, NW, NH, Lambda, Gamma, RW, RH, DeltaB, DeltaW, N, A, Q, DeltaH; // The fixed dimensional parameters
   doublereal eta, nuw, nuh, rhow, rhoh, gam, alpha, q,ff,p, delw, delh, Lb,FF;
   doublereal L, amp, pi, num_periods, dm, dp,offset,tet,batch,tat,powH;
-  doublereal G,I,tras,evapw,evaph,sigma;
-  doublereal chi,beta,gamma_tf,mu_s;
-  doublereal w_wp,w_fos,mu_s_max,mu,midlamb,lamb_max,lamb_min,lamb;
-  
-  /* Loading from file */
-  FILE *myFile;
-  myFile = fopen("bwh_tf_parameters.txt", "r");
-  //read file into array
-  double numberArray[22];
-  int i = 0;
-  while (fscanf(myFile, "%lf", &numberArray[i]) != EOF) // && i!=20)
-  {
-	  //printf("%.15f ",numberArray[i]);
-	  //printf("\n");
-	  i++;
-  }
-  fclose(myFile);
+  doublereal e1,e2,e3;
   
   /* defining the numerical values of the dimensional parameters */
+  // Gilad's model parameters
+  //E      = 3.5;  // m^2 / kg Root’s augmentation per unit biomass
+  //K      = 1.0;  // kg / m^2 Maximum standing biomass
+  //M      = 1.2; // 1 / yr Rate of biomass loss due to mortality
+  //NW     = 4.0; // 1 / yr  Soil water evaporation rate
+  //NH     = 6.0; // 1 / yr  Surface water evaporation rate
+  //Lambda = 0.032;  // (m^2 / kg) / yr Biomass growth rate
+  //Gamma  = 20;   // (m^2 / kg) / yr Soil water consumption rate
+  //RW      = 0.95;  //  Soil water evaporation reduction due to shading
+  //RH      = 1.05;  //  Soil water evaporation reduction due to shading
+  //DeltaB = 0.000625;  // m^2 / yr Seed dispersal coefficient
+  //DeltaW = 0.0625;  // m^2 / yr Transport coefficient for soil water
+  //DeltaH = 0.05; // m^2 / yr (kg / m^2)^{-1} Bottom friction coefficient between surface water and ground surface
+  //Q      = 0.05; // kg / m^2 Biomass reference value beyond which infiltration rate under a patch approaches its maximum
+  //A      = 40.0; // 1/yr  Infiltration rate in fully vegetated soil
+  
+
+  // Yuval's model parameters
+  //E      = 7.0;  // m^2 / kg Root’s augmentation per unit biomass
+  //K      = 0.4;  // kg / m^2 Maximum standing biomass
+  //M      = 10.5; // 1 / yr Rate of biomass loss due to mortality
+  //NW     = 15.0; // 1 / yr  Soil water evaporation rate
+  //NH     = 16.0; // 1 / yr  Surface water evaporation rate
+  //Lambda = 0.9;  // (m^2 / kg) / yr Biomass growth rate
+  //Gamma  = 12.0;   // (m^2 / kg) / yr Soil water consumption rate
+  //RW      = 0.7;  //  Soil water evaporation reduction due to shading
+  //RH      = 1.05;  //  Soil water evaporation reduction due to shading
+  //DeltaB = 1.2;  // m^2 / yr Seed dispersal coefficient
+  //DeltaW = 150.0;  // m^2 / yr Transport coefficient for soil water
+  //DeltaH = 0.05; // m^2 / yr (kg / m^2)^{-1} Bottom friction coefficient between surface water and ground surface
+  //Q      = 0.05; // kg / m^2 Biomass reference value beyond which infiltration rate under a patch approaches its maximum
+  //A      = 40.0; // 1/yr  Infiltration rate in fully vegetated soil
+
+  // Modified Yuval's model parameters
+  //E      = 3.0;  // m^2 / kg Root’s augmentation per unit biomass
+  //K      = 0.9;  // kg / m^2 Maximum standing biomass
+  //M      = 5.5; // 1 / yr Rate of biomass loss due to mortality
+  //NW     = 15.0; // 1 / yr  Soil water evaporation rate
+  //NH     = 16.0; // 1 / yr  Surface water evaporation rate
+  //Lambda = 0.9;  // (m^2 / kg) / yr Biomass growth rate
+  //Gamma  = 12.0;   // (m^2 / kg) / yr Soil water consumption rate
+  //RW      = 0.7;  //  Soil water evaporation reduction due to shading
+  //RH      = 1.05;  //  Soil water evaporation reduction due to shading
+  //DeltaB = 1.2;  // m^2 / yr Seed dispersal coefficient
+  //DeltaW = 150.0;  // m^2 / yr Transport coefficient for soil water
+  //DeltaH = 0.05; // m^2 / yr (kg / m^2)^{-1} Bottom friction coefficient between surface water and ground surface
+  //Q      = 0.05; // kg / m^2 Biomass reference value beyond which infiltration rate under a patch approaches its maximum
+  //A      = 40.0; // 1/yr  Infiltration rate in fully vegetated soil
+ 
+  // Dimensional parameters based on Hezi's simulation on Apr 12
+  //E      = 3.0;  // m^2 / kg Root’s augmentation per unit biomass
+  //K      = 0.33333;  // kg / m^2 Maximum standing biomass
+  //M      = 3.0; // 1 / yr Rate of biomass loss due to mortality
+  //NW     = 6.0; // 1 / yr  Soil water evaporation rate
+  //NH     = 4.2; // 1 / yr  Surface water evaporation rate
+  //Lambda = 0.3;  // (m^2 / kg) / yr Biomass growth rate
+  //Gamma  = 14.0;   // (m^2 / kg) / yr Soil water consumption rate
+  //RW      = 1.0;  //  Soil water evaporation reduction due to shading
+  //RH      = 1.0;  //  Soil water evaporation reduction due to shading
+  //DeltaB = 0.00025;  // m^2 / yr Seed dispersal coefficient
+  //DeltaW = 0.00025;  // m^2 / yr Transport coefficient for soil water
+  //DeltaH = 0.05; // m^2 / yr (kg / m^2)^{-1} Bottom friction coefficient between surface water and ground surface
+  //Q      = 0.433; // kg / m^2 Biomass reference value beyond which infiltration rate under a patch approaches its maximum
+  //A      = 240.0; // 1/yr  Infiltration rate in fully vegetated soil
+  
   // Modified Dimensional parameters based on Hezi's simulation on Apr 12
-  // READ_PARAMETERS_FROM_HERE
+  // REAR_PARAMETERS_FROM_HERE
   E      = 1.5;  // m^2 / kg Root’s augmentation per unit biomass
   K      = 0.666;  // kg / m^2 Maximum standing biomass
   M      = 2.0; // 1 / yr Rate of biomass loss due to mortality
@@ -161,15 +191,25 @@ int stpnt (integer ndim, doublereal x,
   delh  = (DeltaH * M) / (DeltaB * Lambda);
   powH  = 2;
   p = nuw * ( (alpha * ff) + nuh)/ (alpha * ff) - 0.1; // Critical value of p for stable bare-soil, minus 1
-  lamb_min = 0.7;
-  lamb_max = 1;
-  mu_s_max = 0.3;
-  w_wp = 0.1;
-  w_fos = 0.3;
-  beta  = 1;
-  chi   = 0;
   
   printf ( "Critical percipitation: p_c = %4.2f \n",  (p + 0.1) );
+  
+  // Direct input of non-dimensional parameters
+  
+  //eta   = 1.0;
+  //nuw   = 2.0 ;
+  //nuh   = 4.4 ;
+  //rhow  = 1.0;
+  //rhoh  = 4.0;
+  //gam   = 14.0 ;
+  //alpha = 18.0 ;
+  //q     = 0.05;
+  //ff    = 0.01;
+  ////p   = 1.9;
+  //delw  = 10.0  ;
+  //delh  = 20000.0 ;
+  //powH  = 2;
+  //p = nuw * ( (alpha * ff) + nuh)/ (alpha * ff) - 0.01;
   
   
   pi = atan(1.) * 4.0;  
@@ -199,13 +239,6 @@ int stpnt (integer ndim, doublereal x,
   par[17+F2C] = delw;
   par[18+F2C] = delh;
   par[19+F2C] = powH;
-  par[20+F2C] = lamb_min;
-  par[21+F2C] = lamb_max;
-  par[22+F2C] = mu_s_max;
-  par[23+F2C] = w_wp;
-  par[24+F2C] = w_fos;
-  par[25+F2C] = beta;
-  par[26+F2C] = chi;
 
 
   //par[17+F2C] = num_periods;

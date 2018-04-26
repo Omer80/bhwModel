@@ -1,13 +1,8 @@
-# Constants File BWH model with tradeoff parameter chi
-unames = {1:'b', 2:'w', 3:'h'}
-parnames = {1:'p',2:'lamb_max',3:'lamb_min',4:'eta',5:'nuw',6:'nuh',
-            7:'rhow',8:'rhoh',9:'gamma',11:'L',13:'alpha',14:'f',15:'q',
-            16:'w_wp',17:'w_fos',18:'w_fc',19:'mu_s_max',20:'omegaf',
-            21:'chi',22:'beta',23:'a',24:'dw',25:'dh',
-            26:'dummy_b',27:'dummy_w',28:'dummy_j'}
-
+# Constants File OZ circles model
+unames = {1:'B', 2:'W', 3:'H', 4:'Bx', 5:'Wx', 6:'Hx'}
+parnames = {1:'eta', 2:'nuw', 3:'nuh', 4:'rhow', 5:'rhoh', 6:'gamma', 7:'alpha', 8:'q',9:'f',11:'L',16:'p', 17:'delw', 18:'delh'}
 NDIM = 6,   IPS = 4, IRS = 0, ILP = 1
-ICP  = ['p','dummy_w']
+ICP  = [16,13]
 NTST = 800, NCOL = 4, IAD = 3, ISP = 0, ISW = 1, IPLT = 0, NBC = 4, NINT = 0
 NMX = 500, RL0 = -100.0, RL1 = 2000.0, A0 = -1000.0, A1 = 1000.0  
 NPR = 500, MXBF =  10, IID = 2, ITMX = 24, ITNW = 15, NWTN = 9, JAC = 0
@@ -19,7 +14,7 @@ THL =  {11: 0.0} , THU =  {}
 # Important things to know:
 ###########################################
 # NDIM = number of dimensions = number of 1st order ODEs
-# IPS  = Defines the problem type: 1=FP(ODEs),2=periodic, 4= boundary value prob.; read page 104 of the documentation
+# IPS  = Defines the problem type: 2=periodic, 4= boundary value prob.; read page 104 of the documentation
 # IRS  = Start solution label. 0=analytical initial conditions
 # ILP  = Fold detection; 1=on, 0=off
 ###########################################
@@ -28,7 +23,7 @@ THL =  {11: 0.0} , THU =  {}
 # NTST = Number of mesh intervals. Time (space) axis is divided in NTST segments
 # NCOL = Number of collocation points. Leave it equal 4. Read more: page 94 of the documentation
 # IAD  = Leave it as it is (=3). Read more: page 96 of the documentation
-# ISP  = Bifurcation detection; 0=off, 1=BP(FP), 3=BP(PO,BVP), 2=all
+# ISP  = Bifurcation detection. 2=all
 # ISW  = Branch switching. 1=normal. Read more: page 102 of the documentation
 # IPLT = Select Principal Solution Measure. 0=L2 Norm. Read more: page 107 of the documentation
 # NBC  = Number of Boundary Conditions
