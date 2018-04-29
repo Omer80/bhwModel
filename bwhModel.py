@@ -370,6 +370,7 @@ class bwhModel(object):
             state_minus[j] = state_minus[j]-delta
             jacobian.append((np.array(self.dudt(state_plus))-np.array(self.dudt(state_minus)))/(2.0*delta))
         return np.array(jacobian).T
+
     def check_pde_jacobians(self,n=100):
         import time
         timer_analytic=0
@@ -397,13 +398,13 @@ class bwhModel(object):
     def calc_pde_numerical_jacobian(self,state,delta=0.00000001):
         n = len(state)
         jacobian = []
-        for j in range(n):
+        for j in xrange(n):
             state_plus = np.copy(state)
             state_minus = np.copy(state)
             state_plus[j] = state_plus[j]+delta
             state_minus[j] = state_minus[j]-delta
             jacobian.append((self.rhs_pde(state_plus)-self.rhs_pde(state_minus))/(2.0*delta))
-        return np.array(jacobian).T
+        return sparse.csc_matrix(np.array(jacobian).T)
 
     def calc_numeric_pde_eigs(self,state):
         return linalg.eigvals(self.calc_pde_numerical_jacobian(state))
