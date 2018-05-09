@@ -34,13 +34,10 @@ import scipy.linalg as linalg
 from scipy.integrate import odeint,solve_ivp
 from scipy.fftpack import fftn, ifftn
 import scipy.sparse as sparse
-#import netCDF4 as netcdf
 from utilities import handle_netcdf as hn
-#from scipy.io import netcdf
 import deepdish.io as dd
-#from tlm_parameters import par
 
-Es_normal={'rhs':"oz_tradeoff",
+Es_normal={'rhs':"oz",
         'n':(256,),
         'l':(64.0,),
         'bc':"periodic",
@@ -117,10 +114,10 @@ class bwhModel(object):
             self.setup['Vs_symbols'] = b,w,h
             self.setup['nvar']=len(self.setup['Vs_symbols'])
             from sympy.functions import cos as symcos
-            G = w*(1 + p['eta']*b)*(1 + p['eta']*b)
+            G = w*(1.0+p['eta']*b)*(1.0+p['eta']*b)
             I = (p['alpha']*((b + p['q']*p['f'])/(b + p['q'])))
-            evapw = ((p['nuw'])/(1 + p['rhow']*b))*w
-            evaph = ((p['nuh'])/(1 + p['rhoh']*b))*w
+            evapw = ((p['nuw'])/(1.0+p['rhow']*b))*w
+            evaph = ((p['nuh'])/(1.0+p['rhoh']*b))*h
             tras  = p['gamma']*b*G
             self.p_t_eq = p['p']*(1.0+p['a']*symcos(2.0*np.pi*p['omegaf']*t/p['conv_T_to_t']))
             self.dbdt_eq = G*b*(1-b) - b
@@ -137,7 +134,7 @@ class bwhModel(object):
             G = w*(1 + p['eta']*b)*(1 + p['eta']*b)
             I = (p['alpha']*((b + p['q']*p['f'])/(b + p['q'])))
             evapw = ((p['nuw'])/(1 + p['rhow']*b))*w
-            evaph = ((p['nuh'])/(1 + p['rhoh']*b))*w
+            evaph = ((p['nuh'])/(1 + p['rhoh']*b))*h
             tras  = p['gamma']*b*G
             self.p_t_eq = p['p']*(1.0+p['a']*symcos(2.0*np.pi*p['omegaf']*t/p['conv_T_to_t']))
             self.dbdt_eq = G*b*(1-b) - b
@@ -161,7 +158,7 @@ class bwhModel(object):
             G = w*(1 + p['eta']*b)*(1 + p['eta']*b)
             I = (p['alpha']*((b + p['q']*p['f'])/(b + p['q'])))
             evapw = ((p['nuw'])/(1 + p['rhow']*b))*w
-            evaph = ((p['nuh'])/(1 + p['rhoh']*b))*w
+            evaph = ((p['nuh'])/(1 + p['rhoh']*b))*h
             tras  = gamma_tf*b*G
             self.p_t_eq = p['p']*(1.0+p['a']*symcos(2.0*np.pi*p['omegaf']*t/p['conv_T_to_t']))
             self.dbdt_eq = G*b*(1-b) - mu*b
@@ -551,45 +548,57 @@ class bwhModel(object):
             result[i+1]=self.state
 #        self.state=result[-1]
         return t,result
-    def rk4_integrate(self,initial_state,step=0.1,finish=1000):
-        """ """
-#        print "Integration using rk4 step"
+    def rk4_integrate(self,initial_state=None,step=0.1,finish=1000,**kwargs):
+        """ Integration using The Runge–Kutta method of 4th order as in:
+        https://en.wikipedia.org/wiki/Runge%E2%80%93Kutta_methods#The_Runge%E2%80%93Kutta_method
+        """
+        if kwargs:
+            self.update_parameters(kwargs)
+        if initial_state is None:
+            initial_state=self.state
         time = np.arange(0,finish+step,step)
-        result=[]
+        result=np.zeros((len(time),len(initial_state)))
         t=0
-        result.append(initial_state)
-        for tout in time[1:]:
-            old=result[-1]
+        result[0]=initial_state
+        for i,tout in enumerate(time[1:]):
+            old=result[i]
             while t < tout:
-                k1=self.dt*self.rhs_pde(old,self.time_elapsed)
-                k2=self.dt*self.rhs_pde(old+0.5*k1,self.time_elapsed)
-                k3=self.dt*self.rhs_pde(old+0.5*k2,self.time_elapsed)
-                k4=self.dt*self.rhs_pde(old+k3,self.time_elapsed)
-                self.state=old+(1.0/6.0)*(k1+2.0*k2+2.0*k3+k4)
-                old=self.state
-                t+=self.dt
-                self.time_elapsed+=self.dt
-            result.append(old)
-        return time,result
-    def rk4_integrate_relax(self,initial_state,step=0.1,finish=1000):
-        """ """
-#        print "Integration using rk4 step"
-        time = np.arange(0,finish+step,step)
-        result=[]
-        t=0
-        result.append(initial_state)
-        for tout in time[1:]:
-            old=result[-1]
-            while t < tout:
-                k1=self.dt*self.rhs_pde(old,self.time_elapsed)
-                k2=self.dt*self.rhs_pde(old+0.5*k1,self.time_elapsed)
-                k3=self.dt*self.rhs_pde(old+0.5*k2,self.time_elapsed)
-                k4=self.dt*self.rhs_pde(old+k3,self.time_elapsed)
-                new=old+(1.0/6.0)*(k1+2.0*k2+2.0*k3+k4)
+                k1=self.rhs_pde(old,self.time_elapsed)
+                k2=self.rhs_pde(old+0.5*self.dt*k1,self.time_elapsed+(self.dt/2.0))
+                k3=self.rhs_pde(old+0.5*self.dt*k2,self.time_elapsed+(self.dt/2.0))
+                k4=self.rhs_pde(old+self.dt*k3,self.time_elapsed+(self.dt))
+                new=old+(self.dt/6.0)*(k1+2.0*k2+2.0*k3+k4)
                 old=new
                 t+=self.dt
                 self.time_elapsed+=self.dt
-            result.append(old)
+            result[i+1]=old
+        self.state=result[-1]
+        return time,result
+    def rk4_integrate_relax(self,initial_state=None,step=0.1,finish=1000,**kwargs):
+        """ Integration using The Runge–Kutta method of 4th order as in:
+        https://en.wikipedia.org/wiki/Runge%E2%80%93Kutta_methods#The_Runge%E2%80%93Kutta_method
+        """
+        if kwargs:
+            self.update_parameters(kwargs)
+        if initial_state is None:
+            initial_state=self.state
+        time = np.arange(0,finish+step,step)
+        result=np.zeros((len(time),len(initial_state)))
+        t=0
+        result[0]=initial_state
+        for i,tout in enumerate(time[1:]):
+            old=result[i]
+            while t < tout:
+                k1=self.rhs_pde(old,self.time_elapsed)
+                k2=self.rhs_pde(old+0.5*self.dt*k1,self.time_elapsed+(self.dt/2.0))
+                k3=self.rhs_pde(old+0.5*self.dt*k2,self.time_elapsed+(self.dt/2.0))
+                k4=self.rhs_pde(old+self.dt*k3,self.time_elapsed+(self.dt))
+                new=old+(self.dt/6.0)*(k1+2.0*k2+2.0*k3+k4)
+                old=new
+                t+=self.dt
+                self.time_elapsed+=self.dt
+            result[i+1]=old
+        self.state=result[-1]
         return time,result
     def pseudo_spectral_integrate(self,initial_state,step=0.1,finish=1000):
 #        print "Integration using pseudo-spectral step"
@@ -683,19 +692,18 @@ class bwhModel(object):
             self.spectral_multiplier(self.dt)
     """ Plot functions """
 
-    def plotODEInt(self,p,a,initial_state=[0.8,0.8,0.8],
-                   chi=[0,0.5,1.0],
+    def plotODEInt(self,p,a=0,initial_state=[0.8,0.8,0.8],
                    step=0.1,start=0,finish=200):
         import matplotlib.pylab as plt
-        plt.figure()
-        cl = plt.cm.winter(np.linspace(0, 1, 3))
-        chi = np.array(chi)
-        for i,chi_v in enumerate(chi):
-            t,sol = self.ode_integrate(initial_state,step,start,finish,p=p,a=a,chi=chi_v)
-            plt.plot(t/self.p['conv_T_to_t'], sol[0],color=cl[i], lw=2,label=r'$\chi={:3.2f}$'.format(chi_v))
-        plt.xlabel(r'$T \; [yr]$')
-        plt.ylabel(r'$b$')
-        plt.legend(loc='best')
+        fig,ax=plt.subplots(3,1,sharex=True)
+        t,sol = self.ode_integrate(initial_state,step,start,finish,p=p,a=a)
+        ax[0].plot(t,sol[0])
+        ax[1].plot(t,sol[1])
+        ax[2].plot(t,sol[2])
+        ax[2].set_xlabel(r'$t$')
+        ax[0].set_ylabel(r'$b$')
+        ax[1].set_ylabel(r'$w$')
+        ax[2].set_ylabel(r'$h$')
         plt.tight_layout()
         plt.show()
         
@@ -704,9 +712,9 @@ class bwhModel(object):
         return state.reshape(self.setup['nvar'],*self.setup['n'])
     
     def plot(self,state=None,fontsize=12,update=False):
+        import matplotlib.pylab as plt
         if state is None:
             state=self.state
-        import matplotlib.pylab as plt
         if update:
             plt.ion()
         b,w,h=state.reshape(self.setup['nvar'],*self.setup['n'])

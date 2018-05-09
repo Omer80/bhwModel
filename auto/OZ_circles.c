@@ -156,7 +156,7 @@ int stpnt (integer ndim, doublereal x,
   // Modified Dimensional parameters based on Hezi's simulation on Apr 12
   // REAR_PARAMETERS_FROM_HERE
   E      = 1.5;  // m^2 / kg Root’s augmentation per unit biomass
-  K      = 0.666;  // kg / m^2 Maximum standing biomass
+  K      = 2.0/3.0;  // kg / m^2 Maximum standing biomass
   M      = 2.0; // 1 / yr Rate of biomass loss due to mortality
   NW     = 1.5; // 1 / yr  Soil water evaporation rate
   NH     = 4.5; // 1 / yr  Surface water evaporation rate
@@ -193,6 +193,7 @@ int stpnt (integer ndim, doublereal x,
   p = nuw * ( (alpha * ff) + nuh)/ (alpha * ff) - 0.1; // Critical value of p for stable bare-soil, minus 1
   
   printf ( "Critical percipitation: p_c = %4.2f \n",  (p + 0.1) );
+  printf ( "eta=%4.2f,gam=%4.2f,alpha=%4.2f,ff=%4.2f,q=%4.2f, \n",  eta,gam,alpha,ff,q);
   
   // Direct input of non-dimensional parameters
   

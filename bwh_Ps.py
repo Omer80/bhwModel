@@ -2,7 +2,7 @@
 
 dimpar = {'Lambda_min' : 0.025,
           'Lambda_max' : 0.030,
-          'K'      : 0.666,
+          'K'      : 2.0/3.0,
           'E'      : 1.5,
           'M0'     : 2.0,
           'NW'     : 1.5,
@@ -48,12 +48,13 @@ def update_par():
            'w_fos'    : dimpar['s_fos']*(dimpar['nZ']*dimpar['Lambda_max'])/dimpar['M0'],
            'w_fc'     : dimpar['s_fc']*(dimpar['nZ']*dimpar['Lambda_max'])/dimpar['M0'],
            'mu_s_max' : dimpar['mu_s_max'],
-           'chi'      : 1.0,
+           'chi'      : 0.5,
            'beta'     : 1.0,
            'omegaf'   : 1.0,
            'a'        : dimpar['seasonality'],
-           'dimpar'   :dimpar
+           'dimpar'   : dimpar
            }
+    par['pc']=par['nuw']*((par['alpha']*par['f'])+par['nuh'])/(par['alpha']*par['f'])
     return par
 
 par=update_par()

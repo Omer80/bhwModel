@@ -1,10 +1,8 @@
 #===============
 # AUTO FHN
 #===============
-ICP1 = [16,13,11]
-ICP2 = [11,13,16]
-tf = run(e='bwh_tf',c='bwh_tf',NMX=20000,NPR=2500,DSMAX=0.00111,IPS=1,ISP=2,DS=0.0002,IPLT=13,ICP=ICP1)
-tb = run(e='bwh_tf',c='bwh_tf',NMX=20000,NPR=2500,DSMAX=0.00171,IPS=1,ISP=2,DS=-0.0002,IPLT=13,ICP=ICP1)
+tf = run(e='bwh_to_E_Q',c='bwh_to_E_Q',NMX=20000,NPR=2500,DSMAX=0.00111,IPS=1,ISP=2,DS=0.0002)
+tb = run(e='bwh_to_E_Q',c='bwh_to_E_Q',NMX=20000,NPR=2500,DSMAX=0.00171,IPS=1,ISP=2,DS=-0.0002)
 
 thb = run(tf('HB1'), IPS=2, ISP = 1,NPR=500,NMX=2000,DSMAX=0.005)
 tutu=run(thb('LP2'),ICP=['p','eta',13],ISW=2,NPR=20)
