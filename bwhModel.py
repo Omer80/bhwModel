@@ -35,16 +35,17 @@ from scipy.integrate import odeint,solve_ivp
 from scipy.fftpack import fftn, ifftn
 import scipy.sparse as sparse
 from utilities import handle_netcdf as hn
+from space_integrals import lorentzian_kernel as lk
 import deepdish.io as dd
 
-Es_normal={'rhs':"oz",
-        'n':(256,),
-        'l':(64.0,),
-        'bc':"periodic",
+Es_normal={'rhs':"oz_EQK",
+        'n':(1024,1024),
+        'l':(256.0,256.0),
+        'bc':"neumann",
         'it':"pseudo_spectral",
         'dt':0.1,
         'analyze':True,
-        'verbose':True,
+        'verbose':False,
         'setPDE':True}
 
 def main():
@@ -164,6 +165,34 @@ class bwhModel(object):
             self.dbdt_eq = G*b*(1-b) - mu*b
             self.dwdt_eq = I*h - evapw - tras
             self.dhdt_eq = self.p_t_eq-evaph-I*h
+        elif self.setup['rhs']=="oz_EQK":
+            """ Ms version tradeoff of Lambda with Ms AND Gamma
+            """
+            b,w,h = symbols('b w h')
+            self.Vs_symbols = [b,w,h]
+            self.setup['Vs_symbols'] = b,w,h
+            self.setup['nvar']=len(self.setup['Vs_symbols'])
+            from sympy.functions import cos as symcos
+            from sympy.functions import exp as symexp
+            q_min   = p['q']*(1.0-p['del_to'])
+            q_max   = p['q']*(1.0+p['del_to'])
+            eta_min = p['eta']*(1.0-p['del_to'])
+            eta_max = p['eta']*(1.0+p['del_to'])
+            K_min   = (1.0-p['del_to'])
+            K_max   = (1.0+p['del_to'])
+            K_to   = K_max    + p['chi']*(K_min-K_max)
+            q_to   = (q_max   + p['chi']*(q_min-q_max))/K_to
+            eta_to = (eta_max + (1-p['chi'])*(eta_min-eta_max))*K_to
+            gam    = p['gamma']*K_to
+            G = w*(1.0 + eta_to*b)*(1.0 + eta_to*b)
+            I = (p['alpha']*((b + q_to*p['f'])/(b + q_to)))
+            evapw = ((p['nuw'])/(1 + p['rhow']*b))*w
+            evaph = ((p['nuh'])/(1 + p['rhoh']*b))*h
+            tras  = gam*b*G
+            self.p_t_eq = p['p']*(1.0+p['a']*symcos(2.0*np.pi*p['omegaf']*t/p['conv_T_to_t']))
+            self.dbdt_eq=G*b*(1.0-b) - b
+            self.dwdt_eq=I*h - evapw - tras
+            self.dhdt_eq=self.p_t_eq - I*h - evaph
         """ Creating numpy functions """
         self.symeqs = Matrix([self.dbdt_eq,self.dwdt_eq,self.dhdt_eq])
         self.ode  = lambdify((b,w,h,t,p['p'],p['chi'],p['a'],p['omegaf']),self.sub_parms(self.symeqs),"numpy",dummify=False)
@@ -422,10 +451,13 @@ class bwhModel(object):
     def integrate(self,initial_state=None,step=10,
                   max_time = 1000,tol=1.0e-5,plot=False,savefile=None,
                   create_movie=False,check_convergence=True,
+                  verbose=None,
                   sim_step=None,**kwargs):
         if kwargs:
             self.update_parameters(kwargs)
         self.filename = savefile
+        if verbose is not None:
+            self.setup['verbose']=verbose
         if initial_state is None:
             initial_state = self.initial_state
         self.time_elapsed=0
@@ -622,7 +654,6 @@ class bwhModel(object):
                 t+=self.dt
                 self.time_elapsed+=self.dt
             self.state=np.ravel((b,w,h))
-            self.sim_step+=1
             result.append(self.state)
         return time,result
     def pseudo_spectral_integrate_relax(self,initial_state,step=0.1,finish=1000):
@@ -647,7 +678,6 @@ class bwhModel(object):
                 t+=self.dt
                 self.time_elapsed+=self.dt
             self.state=np.ravel((b,w,h))
-            self.sim_step+=1
             result.append(self.state)
         return time,result
 
@@ -694,7 +724,7 @@ class bwhModel(object):
 
     def plotODEInt(self,p,a=0,initial_state=[0.8,0.8,0.8],
                    step=0.1,start=0,finish=200):
-        import matplotlib.pylab as plt
+        import matplotlib.pyplot as plt
         fig,ax=plt.subplots(3,1,sharex=True)
         t,sol = self.ode_integrate(initial_state,step,start,finish,p=p,a=a)
         ax[0].plot(t,sol[0])
@@ -712,7 +742,7 @@ class bwhModel(object):
         return state.reshape(self.setup['nvar'],*self.setup['n'])
     
     def plot(self,state=None,fontsize=12,update=False):
-        import matplotlib.pylab as plt
+        import matplotlib.pyplot as plt
         if state is None:
             state=self.state
         if update:

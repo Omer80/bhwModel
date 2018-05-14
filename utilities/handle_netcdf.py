@@ -8,6 +8,26 @@ import time as t
 import netCDF4
 import numpy as np
 
+def _blit_draw(self, artists, bg_cache):
+    # Handles blitted drawing, which renders only the artists given instead
+    # of the entire figure.
+    updated_ax = []
+    for a in artists:
+        # If we haven't cached the background for this axes object, do
+        # so now. This might not always be reliable, but it's an attempt
+        # to automate the process.
+        if a.axes not in bg_cache:
+            # bg_cache[a.axes] = a.figure.canvas.copy_from_bbox(a.axes.bbox)
+            # change here
+            bg_cache[a.axes] = a.figure.canvas.copy_from_bbox(a.axes.figure.bbox)
+        a.axes.draw_artist(a)
+        updated_ax.append(a.axes)
+
+    # After rendering all the needed artists, blit each axes individually.
+    for ax in set(updated_ax):
+        # and here
+        # ax.figure.canvas.blit(ax.bbox)
+        ax.figure.canvas.blit(ax.figure.bbox)
 
 def setup_simulation(fname,Ps,Es):
     """
@@ -66,7 +86,7 @@ def save_sim_snapshot(fname,step,time,Vs,Es):
                 rootgrp[str(var)][step,:,:] = Vs[i]
 
 
-def create_animation(fname,output=None,showtime=False):
+def create_animation(fname,output=None,showtime=True):
     import matplotlib
     matplotlib.use('Agg')    
     import matplotlib.animation as animation
@@ -96,8 +116,12 @@ def create_animation(fname,output=None,showtime=False):
                 line2, = ax[1].plot(x,w[i],'g-')
                 line3, = ax[2].plot(x,h[i],'g-')
                 if showtime:
-                    ax.set_title(r'$b$ at $t={:4.3f}$'.format(t[i]), fontsize=25)
-                ims.append([line1,line2,line3])
+                    title = ax[0].text(0.5,1.05,r'$b$  at  $t={:5.2f}$'.format(t[i]),
+                                       size=plt.rcParams["axes.titlesize"],
+                                       ha="center", transform=ax[0].transAxes, )
+                    ims.append([line1,line2,line3,title])
+                else:
+                    ims.append([line1,line2,line3])
         elif nd == 2:
             fig, ax = plt.subplots(1,2,sharex=True,sharey=True)
             fig.subplots_adjust(right=0.8)
@@ -125,7 +149,7 @@ def create_animation(fname,output=None,showtime=False):
                 ims.append([im1,im2,im3])
                 cbar_ax2 = fig.add_axes([0.85, 0.35, 0.05, 0.55])
                 fig.colorbar(im1, cax=cbar_ax2)
-    ani = animation.ArtistAnimation(fig, ims, interval=50, blit=True, repeat_delay=1000)
+    ani = animation.ArtistAnimation(fig, ims, interval=50, blit=False, repeat_delay=1000)
     if output is None:
         ani.save('%s.mp4'%fname)
     elif type(output)==str:

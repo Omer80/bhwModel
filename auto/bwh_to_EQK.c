@@ -25,7 +25,7 @@ int func (integer ndim, const doublereal *u, const integer *icp,
   doublereal G,I,tras,evapw,evaph,sigma,a;
   doublereal chi,beta,gamma_tf,mu_s;
   doublereal q_to,eta_to,K_to,del_to;
-  doublereal q_min,q_max,eta_min,eta_max;K_min,K_max;
+  doublereal q_min,q_max,eta_min,eta_max,K_min,K_max;
   doublereal w_wp,w_fos,mu_s_max,mu,midlamb,lamb_max,lamb_min,lamb;
   pi = atan(1.) * 4.0;  
   /* Defining the parameters */
@@ -75,10 +75,11 @@ int func (integer ndim, const doublereal *u, const integer *icp,
   eta_max = eta*(1.0+del_to);
   K_min   = (1.0-del_to);
   K_max   = (1.0+del_to);
-    
-  q_to   = q_max    + pow(chi,beta)*(q_min-q_max);
-  eta_to = eta_max  + pow((1-chi),beta)*(eta_min-eta_max);
+  
   K_to   = K_max    + pow(chi,beta)*(K_min-K_max);
+  q_to   = (q_max    + pow(chi,beta)*(q_min-q_max))/K_to;
+  eta_to = (eta_max  + pow((1-chi),beta)*(eta_min-eta_max))*K_to;
+  gam    = gam*K_to;
   
   G = W*(1 + eta_to*B)*(1 + eta_to*B);
   I = (alpha*((B + q_to*ff)/(B + q_to)));
@@ -118,7 +119,7 @@ int stpnt (integer ndim, doublereal x,
   doublereal G,I,tras,evapw,evaph,sigma,a;
   doublereal chi,beta,gamma_tf,mu_s,w_fc,omegaf;
   doublereal q_to,eta_to,del_to;
-  doublereal q_min,q_max,eta_min,eta_max;
+  doublereal q_min,q_max,eta_min,eta_max,K_min,K_max,K_to;
   doublereal w_wp,w_fos,mu_s_max,mu,midlamb,lamb_max,lamb_min,lamb;
   
   /* Loading from file */
@@ -207,15 +208,20 @@ int stpnt (integer ndim, doublereal x,
   
   q_min   = q*(1.0-del_to);
   q_max   = q*(1.0+del_to);
-  eta_min = rhoh*(1.0-del_to);
-  eta_max = rhoh*(1.0+del_to);
-    
-  q_to   = q_max    + pow(chi,beta)*(q_min-q_max);
-  eta_to = eta_max  + pow(chi,beta)*(eta_min-eta_max);
+  eta_min = eta*(1.0-del_to);
+  eta_max = eta*(1.0+del_to);
+  K_min   = (1.0-del_to);
+  K_max   = (1.0+del_to);
+  
+  K_to   = K_max    + pow(chi,beta)*(K_min-K_max);
+  q_to   = (q_max    + pow(chi,beta)*(q_min-q_max))/K_to;
+  eta_to = (eta_max  + pow((1-chi),beta)*(eta_min-eta_max))*K_to;
+  gam    = gam*K_to;
+  
   
   printf ( "Critical percipitation: p_c = %4.2f \n",  (p + 0.1) );
   //printf ( "w_wp = %4.2f , w_fos = %4.2f \n",  w_wp,w_fos );
-  printf ( "q_to = %4.2f , eta_to = %4.2f \n",  q_to,eta_to );
+  printf ( "q_to = %4.2f , eta_to = %4.2f, K_to = %4.2f \n",  q_to,eta_to,K_to );
   printf ( "chi = %4.2f \n",  chi );
   
   
@@ -230,14 +236,14 @@ int stpnt (integer ndim, doublereal x,
   /* load into internal parameters */
 
  
-  par[1+F2C]  = eta;
+  par[1+F2C]  = eta_to;
   par[2+F2C]  = nuw;
   par[3+F2C]  = nuh;
   par[4+F2C]  = rhow;
   par[5+F2C]  = rhoh;
   par[6+F2C]  = gam;
   par[7+F2C]  = alpha;
-  par[8+F2C]  = q;
+  par[8+F2C]  = q_to;
   par[9+F2C]  = ff;
   par[13+F2C] = dummy_b;
   par[14+F2C] = dummy_w;

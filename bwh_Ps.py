@@ -22,6 +22,7 @@ dimpar = {'Lambda_min' : 0.025,
           'mu_s_max' : 0.30,
           'seasonality': 0.0,
           'npor'   : 0.30,
+          'del_to' : 0.3,
           'Z'      : 1000.0,
          }
 dimpar['s_fc'] = 0.16/dimpar['npor'] # Theta_fc/npor
@@ -32,6 +33,7 @@ def update_par():
     par = {'lamb_max' : 1.0,
            'lamb_min' : dimpar['Lambda_min']/dimpar['Lambda_max'],
            'eta'      : dimpar['E']*dimpar['K'],
+           'del_to' : dimpar['del_to'],
            'p'        : (dimpar['P']*dimpar['Lambda_max'])/(dimpar['M0']**2),
            'nuw'      : dimpar['NW']/dimpar['M0'],
            'nuh'      : dimpar['NH']/dimpar['M0'],
@@ -86,19 +88,11 @@ def loadParmSet(fname):
     return load(fname)
 
 if __name__ == '__main__':
+    from scipy.io import savemat
     par=update_par()
+    name = 'bwh_set2'
     par['pc']=par['nuw'] * ( (par['alpha'] * par['f']) + par['nuh'])/ (par['alpha'] * par['f'])
     print "Nondimensional:",
     print par
-    saveParmSet('bwh_set2',par,saveroot=False)
-#    import numpy as np
-#    p=par
-#    a = np.array([p['lamb_max'],p['lamb_min'],p['eta'],
-#                  p['p'],p['nu'],p['rho'],p['kappa'],
-#                  p['c'],p['zeta'],p['gamma'],
-#                  p['s_wp'],p['s_fos'],p['s_fc'],
-#                  p['s_h'],p['mu_s_max'],
-#                  p['chi'],p['beta'],p['iota'],
-#                  p['omegaf'],p['delta_s']])
-#    np.savetxt("./auto/tlm_parameters.txt",a.T)
-##    savemat("./p2p/b2s2_parameters.mat",p)
+    saveParmSet(name,par,saveroot=False)
+    savemat("./p2p/"+name+".mat",par)
