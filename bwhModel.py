@@ -39,8 +39,8 @@ from utilities import handle_netcdf as hn
 import deepdish.io as dd
 
 Es_normal={'rhs':"oz_EQK_relax",
-        'n':(1024,),
-        'l':(256.0,),
+        'n':(64,64),
+        'l':(16.0,16.0),
         'bc':"neumann",
         'it':"pseudo_spectral",
         'dt':0.1,
@@ -373,6 +373,7 @@ class bwhModel(object):
 
     def relax_h(self,h,maxiter=10,verbose=0):
         """ """
+        h = np.ravel(h)
         try:
             h = newton_krylov(self.rhs_h_eq_relax,h,
                               method='lgmres',verbose=verbose,
@@ -382,7 +383,7 @@ class bwhModel(object):
             converged=False
             if self.setup['verbose']:
                 print("No Convergence flag")
-        return h,converged
+        return h.reshape(self.setup['n']),converged
     
     def rhs_pde_nonlindiff(self,state,t=0):
         b,w,h=np.split(state,self.setup['nvar'])
@@ -703,8 +704,8 @@ class bwhModel(object):
             while t < tout:
                 self.fftb = self.multb*(self.fftb + self.dt*fftn(self.dbdt(b,w,h,t,self.p['p'],self.p['chi'],self.p['a'],self.p['omegaf'])))#.real
                 self.fftw = self.multw*(self.fftw + self.dt*fftn(self.dwdt(b,w,h,t,self.p['p'],self.p['chi'],self.p['a'],self.p['omegaf'])))#.real
-                b= ifftn(self.fftb).real
-                w= ifftn(self.fftw).real
+                b = ifftn(self.fftb).real
+                w = ifftn(self.fftw).real
                 h,flag=self.relax_h(h,verbose=0)
                 t+=self.dt
                 self.time_elapsed+=self.dt

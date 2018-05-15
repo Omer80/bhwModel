@@ -14,7 +14,7 @@ def simdraught(prec_i,prec_f,years,Ps,chi,
                first_time = 1000,tol=1.0e-8,
                fname="cont",verbose=True):
     import deepdish.io as dd
-    Es={'rhs':"oz_EQK_relax",'n':n,'l':l,'bc':"periodic",'it':"pseudo_spectral",
+    Es={'rhs':"oz_EQK_relax",'n':n,'l':l,'bc':"neumann",'it':"pseudo_spectral",
         'dt':0.1,'verbose':verbose,'analyze':False,'setPDE':True}
     if type(Vs_initial)==str:
         fname = fname+"_"+Vs_initial
@@ -46,7 +46,7 @@ def simdraught(prec_i,prec_f,years,Ps,chi,
 
 def followStable(prec_i,prec_min,prec_max,delta_prec,Ps,n=(128,128),l=(64.0,64.0),Vs_initial="random",root=False,track=False,max_time = 1000,tol=1.0e-8,fname="cont",verbose=True):
     import deepdish.io as dd
-    Es={'rhs':"gr",'n':n,'l':l,'bc':"periodic",'it':"pseudo_spectral",
+    Es={'rhs':"oz_EQK",'n':n,'l':l,'bc':"neumann",'it':"pseudo_spectral",
         'dt':0.1,'verbose':False,'analyze':False,'setPDE':True}
     if type(Vs_initial)==str:
         fname = fname+"_"+Vs_initial
