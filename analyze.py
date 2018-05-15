@@ -10,11 +10,12 @@ import numpy as np
 
 def simdraught(prec_i,prec_f,years,Ps,chi,
                n=(1024,1024),l=(256.0,256.0),
-               Vs_initial="random",
+               Vs_initial="random",rhs="oz_EQK",
+               bc="neumann",it="pseudo_spectral",
                first_time = 1000,tol=1.0e-8,
                fname="cont",verbose=True):
     import deepdish.io as dd
-    Es={'rhs':"oz_EQK_relax",'n':n,'l':l,'bc':"neumann",'it':"pseudo_spectral",
+    Es={'rhs':rhs,'n':n,'l':l,'bc':bc,'it':it,
         'dt':0.1,'verbose':verbose,'analyze':False,'setPDE':True}
     if type(Vs_initial)==str:
         fname = fname+"_"+Vs_initial
