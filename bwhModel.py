@@ -35,7 +35,7 @@ from scipy.integrate import odeint,solve_ivp
 from scipy.fftpack import fftn, ifftn
 import scipy.sparse as sparse
 from utilities import handle_netcdf as hn
-from space_integrals import lorentzian_kernel as lk
+#from space_integrals import lorentzian_kernel as lk
 import deepdish.io as dd
 
 Es_normal={'rhs':"oz_EQK_relax",
