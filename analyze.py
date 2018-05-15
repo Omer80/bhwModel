@@ -14,8 +14,8 @@ def simdraught(prec_i,prec_f,years,Ps,chi,
                first_time = 1000,tol=1.0e-8,
                fname="cont",verbose=True):
     import deepdish.io as dd
-    Es={'rhs':"gr",'n':n,'l':l,'bc':"periodic",'it':"pseudo_spectral",
-        'dt':0.1,'verbose':False,'analyze':False,'setPDE':True}
+    Es={'rhs':"oz_EQK_relax",'n':n,'l':l,'bc':"periodic",'it':"pseudo_spectral",
+        'dt':0.1,'verbose':verbose,'analyze':False,'setPDE':True}
     if type(Vs_initial)==str:
         fname = fname+"_"+Vs_initial
     time_span = np.arange(0,years+1,1)
