@@ -11,7 +11,7 @@ import numpy as np
 def simdraught(prec_i,prec_f,years,Ps,chi,
                n=(1024,1024),l=(256.0,256.0),
                Vs_initial="random",
-               max_time = 1000,tol=1.0e-8,
+               first_time = 1000,tol=1.0e-8,
                fname="cont",verbose=True):
     import deepdish.io as dd
     Es={'rhs':"gr",'n':n,'l':l,'bc':"periodic",'it':"pseudo_spectral",
@@ -22,8 +22,8 @@ def simdraught(prec_i,prec_f,years,Ps,chi,
     m = bwhModel(Vs=Vs_initial,Es=Es,Ps=Ps)
     m.setup['verbose']=verbose
     # Converging on the first solution using integration and then root
-    Vs_init = m.integrate(m.initial_state,p=prec_i,check_convergance=True,
-                          max_time=max_time,p=prec_i,chi=chi)
+    Vs_init = m.integrate(m.initial_state,check_convergence=True,
+                          max_time=first_time,p=prec_i,chi=chi)
     Vs = Vs_init.copy()
     prec_gradient_down = np.linspace(prec_i,prec_f,len(time_span))
     b_sol = np.zeros((len(prec_gradient_down),n[0],n[1]))
@@ -32,7 +32,7 @@ def simdraught(prec_i,prec_f,years,Ps,chi,
     for i,prec in enumerate(prec_gradient_down):
         print "Integration for p =",prec
         Vs_new=m.integrate(initial_state=Vs,max_time=m.p['conv_T_to_t'],
-                           check_convergance=False,p=prec,chi=chi)
+                           check_convergence=False,p=prec,chi=chi)
         b,w,h=m.split_state(Vs_new)
         b_sol[i]=b
         w_sol[i]=w
