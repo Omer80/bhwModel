@@ -38,9 +38,9 @@ from utilities import handle_netcdf as hn
 #from space_integrals import lorentzian_kernel as lk
 import deepdish.io as dd
 
-Es_normal={'rhs':"oz_EQK_relax",
-        'n':(64,64),
-        'l':(16.0,16.0),
+Es_normal={'rhs':"oz_EQK",
+        'n':(256,),
+        'l':(128.0,),
         'bc':"neumann",
         'it':"pseudo_spectral",
         'dt':0.1,

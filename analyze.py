@@ -9,7 +9,7 @@ from bwhModel import bwhModel
 import numpy as np
 
 def simdraught(prec_i,prec_f,years,Ps,chi,
-               n=(1024,1024),l=(256.0,256.0),
+               n=(256,256),l=(128.0,128.0),
                Vs_initial="random",rhs="oz_EQK",
                bc="neumann",it="pseudo_spectral",
                first_time = 1000,tol=1.0e-8,
