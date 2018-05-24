@@ -489,6 +489,8 @@ class bwhModel(object):
             self.setup['verbose']=verbose
         if kwargs:
             self.update_parameters(kwargs)
+        if step>max_time:
+            step=max_time
         self.filename = savefile
 
         if initial_state is None:

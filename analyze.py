@@ -8,7 +8,7 @@ Created on Tue May 15 07:08:40 2018
 from bwhModel import bwhModel
 import numpy as np
 
-def simdraught(prec_i,prec_f,years,Ps,chi,
+def simdrought(prec_i,prec_f,years,Ps,chi,
                n=(256,256),l=(128.0,128.0),
                Vs_initial="random",rhs="oz_EQK",
                bc="neumann",it="pseudo_spectral",
@@ -33,6 +33,7 @@ def simdraught(prec_i,prec_f,years,Ps,chi,
     for i,prec in enumerate(prec_gradient_down):
         print "Integration for p =",prec
         Vs_new=m.integrate(initial_state=Vs,max_time=m.p['conv_T_to_t'],
+                           step=m.p['conv_T_to_t']/10.0,
                            check_convergence=False,p=prec,chi=chi)
         b,w,h=m.split_state(Vs_new)
         b_sol[i]=b
