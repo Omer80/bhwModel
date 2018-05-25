@@ -7,8 +7,9 @@ Created on Tue May 15 07:08:40 2018
 """
 from bwhModel import bwhModel
 import numpy as np
-
-def simdrought(prec_i,prec_f,years,Ps,chi,
+set2 = 'auto/bwh_set2.hdf5'
+def simdrought(prec_i,prec_f,years,delta_year,chi,
+               Ps=set2,
                n=(256,256),l=(128.0,128.0),
                Vs_initial="random",rhs="oz_EQK",
                bc="neumann",it="pseudo_spectral",
@@ -19,7 +20,7 @@ def simdrought(prec_i,prec_f,years,Ps,chi,
         'dt':0.1,'verbose':verbose,'analyze':False,'setPDE':True}
     if type(Vs_initial)==str:
         fname = fname+"_"+Vs_initial
-    time_span = np.arange(0,years+1,1)
+    time_span = np.arange(0,years+delta_year,delta_year)
     m = bwhModel(Vs=Vs_initial,Es=Es,Ps=Ps)
     m.setup['verbose']=verbose
     # Converging on the first solution using integration and then root
