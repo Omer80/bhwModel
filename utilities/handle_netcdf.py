@@ -95,6 +95,7 @@ def create_animation(fname,output=None,showtime=True):
     ims=[]
     with netCDF4.Dataset("%s.nc"%fname, 'r', format='NETCDF4') as rootgrp:
         nd = int(getattr(rootgrp['setup'],'nd'))
+        conv_T_to_t = float(getattr(rootgrp['Ps'],'conv_T_to_t'))
         t = rootgrp['time'][:]
         if nd == 1:
             fig, ax = plt.subplots(3, 1, sharex=True, sharey=True)
@@ -116,14 +117,14 @@ def create_animation(fname,output=None,showtime=True):
                 line2, = ax[1].plot(x,w[i],'g-')
                 line3, = ax[2].plot(x,h[i],'g-')
                 if showtime:
-                    title = ax[0].text(0.5,1.05,r'$b$  at  $t={:5.2f}$'.format(t[i]),
+                    title = ax[0].text(0.5,1.05,r'$b$  at  $T={:5.2f} \, [yr]$'.format(t[i]/conv_T_to_t),
                                        size=plt.rcParams["axes.titlesize"],
                                        ha="center", transform=ax[0].transAxes, )
                     ims.append([line1,line2,line3,title])
                 else:
                     ims.append([line1,line2,line3])
         elif nd == 2:
-            fig, ax = plt.subplots(1,2,sharex=True,sharey=True)
+            fig, ax = plt.subplots(1,3,sharex=True,sharey=True)
             fig.subplots_adjust(right=0.8)
             ax[0].set_aspect('equal', 'datalim')
             ax[0].set_adjustable('box-forced')
@@ -141,13 +142,17 @@ def create_animation(fname,output=None,showtime=True):
             ax[2].set_title(r'$h$', fontsize=25)
             h = rootgrp['h'][:,:,:]
             for i in xrange(len(t)):
-                im1, = ax.imshow(b[i],cmap=plt.cm.YlGn, animated=True,vmin=0.0,vmax=1.0)
-                im2, = ax.imshow(w[i],cmap=plt.cm.YlGn, animated=True,vmin=0.0,vmax=1.0)
-                im3, = ax.imshow(h[i],cmap=plt.cm.YlGn, animated=True,vmin=0.0,vmax=1.0)
+                im1 = ax[0].imshow(b[i],cmap=plt.cm.YlGn, animated=True,vmin=0.0,vmax=1.0)
+                im2 = ax[1].imshow(w[i],cmap=plt.cm.YlGn, animated=True,vmin=0.0,vmax=1.0)
+                im3 = ax[2].imshow(h[i],cmap=plt.cm.YlGn, animated=True,vmin=0.0,vmax=1.0)
                 if showtime:
-                    ax.set_title(r'$b$ at $t={:4.3f}$'.format(t[i]), fontsize=25)
-                ims.append([im1,im2,im3])
-                cbar_ax2 = fig.add_axes([0.85, 0.35, 0.05, 0.55])
+                    title = ax[1].text(1.6,1.3,r'$T={:5.2f} \, [yr]$'.format(t[i]/conv_T_to_t),
+                                       size=plt.rcParams["axes.titlesize"],
+                                       ha="center", transform=ax[0].transAxes, )
+                    ims.append([im1,im2,im3,title])
+                else:
+                    ims.append([im1,im2,im3])
+                cbar_ax2 = fig.add_axes([0.85, 0.4, 0.05, 0.20])
                 fig.colorbar(im1, cax=cbar_ax2)
     ani = animation.ArtistAnimation(fig, ims, interval=50, blit=False, repeat_delay=1000)
     if output is None:

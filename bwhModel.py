@@ -41,7 +41,7 @@ import deepdish.io as dd
 Es_normal={'rhs':"oz_EQK",
         'n':(256,),
         'l':(128.0,),
-        'bc':"neumann",
+        'bc':"periodic",
         'it':"pseudo_spectral",
         'dt':0.1,
         'analyze':True,
@@ -492,9 +492,15 @@ class bwhModel(object):
         if step>max_time:
             step=max_time
         self.filename = savefile
-
         if initial_state is None:
             initial_state = self.initial_state
+        elif type(initial_state)==str:
+            initial_state=dd.load(initial_state)
+        else:
+            try:
+                self.rhs_pde(initial_state)
+            except (AttributeError,ValueError):
+                pass
         self.time_elapsed=0
         if sim_step is None:
             self.sim_step=0
@@ -774,8 +780,10 @@ class bwhModel(object):
 
     def split_state(self,state):
         return state.reshape(self.setup['nvar'],*self.setup['n'])
+    def save_state(self,state,fname):
+        dd.save(fname+".hdf5",{'state':state,'Ps':self.p,'Es':self.setup})
     
-    def plot(self,state=None,fontsize=12,update=False):
+    def plot(self,state=None,fontsize=24,update=False):
         import matplotlib.pyplot as plt
         if state is None:
             state=self.state
@@ -788,10 +796,10 @@ class bwhModel(object):
             ax1.set_ylim([-0.1,1.0])
 #            ax2.set_ylim([0.0,self.p['s_fc']])
 #            ax3.set_ylim([0.0,self.p['s_fc']])
-            ax1.plot(self.X,b)
+            ax1.plot(self.X,b,'g',lw=2)
             ax1.set_xlim([0,self.X[-1]])
-            ax2.plot(self.X,w)
-            ax3.plot(self.X,h)
+            ax2.plot(self.X,w,'b',lw=2)
+            ax3.plot(self.X,h,'c',lw=2)
             ax3.set_xlabel(r'$x$', fontsize=fontsize)
             ax1.set_ylabel(r'$b$', fontsize=fontsize)
             ax2.set_ylabel(r'$w$', fontsize=fontsize)
