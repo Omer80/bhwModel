@@ -13,7 +13,7 @@ def simdrought(prec_i,prec_f,years,delta_year,chi,
                n=(256,256),l=(128.0,128.0),
                Vs_initial="random",rhs="oz_EQK",
                bc="neumann",it="pseudo_spectral",
-               first_time = 1000,tol=1.0e-8,
+               first_time = 1000,tol=1.0e-8,add_noise=0.01,
                fname="cont",verbose=True):
     import deepdish.io as dd
     Es={'rhs':rhs,'n':n,'l':l,'bc':bc,'it':it,
@@ -40,7 +40,11 @@ def simdrought(prec_i,prec_f,years,delta_year,chi,
         b_sol[i]=b
         w_sol[i]=w
         h_sol[i]=h
-        Vs = Vs_new
+        if add_noise is not None:
+            b=b+add_noise*np.random.random(size=b.shape)
+            w=w+add_noise*np.random.random(size=w.shape)
+            h=h+add_noise*np.random.random(size=h.shape)
+        Vs = np.ravel((b,w,h))
     dd.save(fname+".hdf5",{'p':prec_gradient_down,"T":time_span,
                            'b':b_sol,
                            'w':w_sol,

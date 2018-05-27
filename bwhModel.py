@@ -39,13 +39,14 @@ from utilities import handle_netcdf as hn
 import deepdish.io as dd
 
 Es_normal={'rhs':"oz_EQK",
-        'n':(256,),
-        'l':(128.0,),
+        'n':(256,256),
+        'l':(128.0,128.0),
         'bc':"periodic",
-        'it':"pseudo_spectral",
+        'it':"euler",
         'dt':0.1,
         'analyze':True,
         'verbose':True,
+        'nonlin_h':True,
         'setPDE':True}
 
 def main():
@@ -69,33 +70,7 @@ class bwhModel(object):
         self.set_equations()
         self.dt = 0.1
         self.time_elapsed = 0
-        if self.setup['setPDE']:
-            self.setup['nd']=len(Es['n'])
-            if self.setup['nd']==2:
-                self.p['nx'],self.p['ny']=Es['n']
-                self.p['lx'],self.p['ly']=Es['l']
-                self.l=[self.p['lx'],self.p['ly']]
-                self.n=[self.p['nx'],self.p['ny']]
-                self.dg  = tuple([l/float(n) for l,n in zip(self.l,self.n)])
-                self.dx  = self.dg[0]
-            elif self.setup['nd']==1:
-                self.dg=[Es['l'][0]/float(Es['n'][0])]
-                self.dx=self.dg[0]
-            self.dx2 = self.dx**2
-            self.dt=Es['dt']*self.dx2 / self.p['dh']
-            self.X = np.linspace(0,Es['l'][0],Es['n'][0])
-            from utilities.laplacian_sparse import create_laplacian #,create_gradient
-            if self.setup['rhs']!="oz_relax" and self.setup['rhs']!="oz_EQK_relax":
-                self.lapmat=create_laplacian(self.setup['n'],self.setup['l'], self.setup['bc'] , [1.0,self.p['dw'],self.p['dh']],verbose=self.verbose)
-            elif self.setup['rhs']=="oz_relax" or self.setup['rhs']=="oz_EQK_relax":
-                self.lapmat_b=create_laplacian(self.setup['n'],self.setup['l'], self.setup['bc'],[1.0],verbose=self.verbose)
-                self.lapmat_w=create_laplacian(self.setup['n'],self.setup['l'], self.setup['bc'],[self.p['dw']],verbose=self.verbose)
-                self.lapmat_h=create_laplacian(self.setup['n'],self.setup['l'], self.setup['bc'],[self.p['dh']],verbose=self.verbose)
-                self.dt=Es['dt']*self.dx2 / self.p['dw']
-#            self.gradmat=create_gradient(self.setup['n'],self.setup['l'], self.setup['bc'] , [1.0,self.p['Dw'],self.p['Dh']])
-            self.set_integrator()
-            if self.verbose:
-                print("Laplacian created")
+        self.set_integrator()
         if Vs is not None:
             self.setup_initial_condition(Vs)
         if self.verbose:
@@ -323,6 +298,30 @@ class bwhModel(object):
 
     """ Spatial functions """
     def set_integrator(self):
+        if self.setup['setPDE']:
+            self.setup['nd']=len(self.setup['n'])
+            if self.setup['nd']==2:
+                self.p['nx'],self.p['ny']=self.setup['n']
+                self.p['lx'],self.p['ly']=self.setup['l']
+                self.l=[self.p['lx'],self.p['ly']]
+                self.n=[self.p['nx'],self.p['ny']]
+                self.dg  = tuple([l/float(n) for l,n in zip(self.l,self.n)])
+                self.dx  = self.dg[0]
+            elif self.setup['nd']==1:
+                self.dg=[self.setup['l'][0]/float(self.setup['n'][0])]
+                self.dx=self.dg[0]
+            self.dx2 = self.dx**2
+            self.dt=self.setup['dt']*self.dx2 / self.p['dh']
+            self.X = np.linspace(0,self.setup['l'][0],self.setup['n'][0])
+            from utilities.laplacian_sparse import create_laplacian #,create_gradient
+            if self.setup['rhs']!="oz_relax" and self.setup['rhs']!="oz_EQK_relax":
+                self.lapmat=create_laplacian(self.setup['n'],self.setup['l'], self.setup['bc'] , [1.0,self.p['dw'],self.p['dh']],verbose=self.verbose)
+            elif self.setup['rhs']=="oz_relax" or self.setup['rhs']=="oz_EQK_relax":
+                self.lapmat_b=create_laplacian(self.setup['n'],self.setup['l'], self.setup['bc'],[1.0],verbose=self.verbose)
+                self.lapmat_w=create_laplacian(self.setup['n'],self.setup['l'], self.setup['bc'],[self.p['dw']],verbose=self.verbose)
+                self.lapmat_h=create_laplacian(self.setup['n'],self.setup['l'], self.setup['bc'],[self.p['dh']],verbose=self.verbose)
+                self.dt=self.setup['dt']*self.dx2 / self.p['dw']
+#            self.gradmat=create_gradient(self.setup['n'],self.setup['l'], self.setup['bc'] , [1.0,self.p['Dw'],self.p['Dh']])
         if self.setup['rhs']!="oz_relax" and self.setup['rhs']!="oz_EQK_relax":
             integrator_type = {}
             integrator_type['scipy'] = self.scipy_integrate
@@ -348,8 +347,14 @@ class bwhModel(object):
                 raise  ValueError("No such integrator : %s."%self.setup['it'])
             if self.setup['it']=='pseudo_spectral':
                 self.dt*=100.0
+        if 'nonlin_h' in self.setup.keys():
+            if self.setup['nonlin_h']==True:
+                self.rhs_pde=self.rhs_pde_nonlindiff
+        else:
+            self.rhs_pde=self.rhs_pde_normal
+                
 
-    def rhs_pde(self,state,t=0):
+    def rhs_pde_normal(self,state,t=0):
         b,w,h=np.split(state,self.setup['nvar'])
         return np.ravel((self.dbdt(b,w,h,t,self.p['p'],self.p['chi'],
                                    self.p['a'],self.p['omegaf']),
@@ -373,9 +378,9 @@ class bwhModel(object):
 
     def relax_h(self,h,maxiter=10,verbose=0):
         """ """
-        h = np.ravel(h)
+        hh = np.ravel(h)
         try:
-            h = newton_krylov(self.rhs_h_eq_relax,h,
+            hh = newton_krylov(self.rhs_h_eq_relax,hh,
                               method='lgmres',verbose=verbose,
                               f_tol=1e-2,maxiter=maxiter)
             converged=True
@@ -383,7 +388,7 @@ class bwhModel(object):
             converged=False
             if self.setup['verbose']:
                 print("No Convergence flag")
-        return h.reshape(self.setup['n']),converged
+        return np.reshape(hh,h.shape),converged
     
     def rhs_pde_nonlindiff(self,state,t=0):
         b,w,h=np.split(state,self.setup['nvar'])
@@ -601,7 +606,8 @@ class bwhModel(object):
         if initial_state is None:
             initial_state=self.state            
         time = np.arange(0,finish+step,step)
-        self.b,self.w,self.h=self.split_state(initial_state)
+        self.b,self.w,self.h=np.split(initial_state,3)
+        self.state=np.ravel((self.b,self.w,self.h))
         self.h,flag=self.relax_h(self.h,maxiter=1000,verbose=1)
         self.state=np.ravel((self.b,self.w,self.h))
         result=np.zeros((len(time),len(initial_state)))
@@ -611,7 +617,7 @@ class bwhModel(object):
             self.state=result[i]
             while t < tout:
                 # Need to Euler update ONLY b and w fields
-                b,w,h=self.split_state(self.state)
+                b,w,h=np.split(self.state,3)
                 self.b=b+self.dt*(self.dbdt(b,w,h,t,self.p['p'],self.p['chi'],self.p['a'],self.p['omegaf'])+self.lapmat_b*b)
                 self.w=w+self.dt*(self.dwdt(b,w,h,t,self.p['p'],self.p['chi'],self.p['a'],self.p['omegaf'])+self.lapmat_w*w)
                 self.h,flag=self.relax_h(h,verbose=0)
