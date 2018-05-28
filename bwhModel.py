@@ -38,11 +38,11 @@ from utilities import handle_netcdf as hn
 #from space_integrals import lorentzian_kernel as lk
 import deepdish.io as dd
 
-Es_normal={'rhs':"oz_EQK",
+Es_normal={'rhs':"oz_EQK_relax",
         'n':(256,256),
         'l':(128.0,128.0),
         'bc':"periodic",
-        'it':"euler",
+        'it':"pseudo_spectral",
         'dt':0.1,
         'analyze':True,
         'verbose':True,
@@ -821,7 +821,7 @@ class bwhModel(object):
             ax2.imshow(w,cmap=plt.cm.Blues)
             ax2.set_adjustable('box-forced')
             ax2.autoscale(False)
-            ax2.set_title(r'$h$', fontsize=fontsize)
+            ax2.set_title(r'$w$', fontsize=fontsize)
 #            ax3.imshow(w,cmap=plt.cm.Blues, vmin = smin, vmax = smax)
             ax3.imshow(h,cmap=plt.cm.Blues)
             ax3.set_adjustable('box-forced')

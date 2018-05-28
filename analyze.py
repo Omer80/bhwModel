@@ -33,6 +33,12 @@ def simdrought(prec_i,prec_f,years,delta_year,chi,
     h_sol = np.zeros((len(prec_gradient_down),n[0],n[1]))
     for i,prec in enumerate(prec_gradient_down):
         print "Integration for p =",prec
+        b,w,h=m.split_state(Vs)
+        if add_noise is not None:
+            b=b+add_noise*np.random.random(size=b.shape)
+            w=w+add_noise*np.random.random(size=w.shape)
+            h=h+add_noise*np.random.random(size=h.shape)
+        Vs = np.ravel((b,w,h))
         Vs_new=m.integrate(initial_state=Vs,max_time=m.p['conv_T_to_t'],
                            step=m.p['conv_T_to_t']/10.0,
                            check_convergence=False,p=prec,chi=chi)
@@ -40,11 +46,6 @@ def simdrought(prec_i,prec_f,years,delta_year,chi,
         b_sol[i]=b
         w_sol[i]=w
         h_sol[i]=h
-        if add_noise is not None:
-            b=b+add_noise*np.random.random(size=b.shape)
-            w=w+add_noise*np.random.random(size=w.shape)
-            h=h+add_noise*np.random.random(size=h.shape)
-        Vs = np.ravel((b,w,h))
     dd.save(fname+".hdf5",{'p':prec_gradient_down,"T":time_span,
                            'b':b_sol,
                            'w':w_sol,
