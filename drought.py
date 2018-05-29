@@ -43,15 +43,16 @@ def simdrought(prec_i,prec_f,years_steps,delta_year,chi,
             w=w+add_noise*np.random.random(size=w.shape)
             h=h+add_noise*np.random.random(size=h.shape)
         Vs = np.ravel((b,w,h))
-        Vs_new=m.pseudo_spectral_integrate_relax(initial_state=Vs,
-                                                 finish=delta_year*yr,
-                                                 step=yr,
-                                                 p=prec,chi=chi)
+        time,result=m.pseudo_spectral_integrate_relax(initial_state=Vs,
+                                                      finish=delta_year*yr,
+                                                      step=yr,
+                                                      p=prec,chi=chi)
         if m.converged_relaxation==False:
-            Vs_new=m.pseudo_spectral_integrate(initial_state=Vs,
-                                                     finish=delta_year*yr,
-                                                     step=yr,
-                                                     p=prec,chi=chi)
+            time,result=m.pseudo_spectral_integrate(initial_state=Vs,
+                                                    finish=delta_year*yr,
+                                                    step=yr,
+                                                    p=prec,chi=chi)
+        Vs_new=result[-1]
         b,w,h=m.split_state(Vs_new)
         b_sol[i]=b
         w_sol[i]=w
