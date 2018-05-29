@@ -14,7 +14,7 @@ import numpy as np
 import deepdish.io as dd
 
 def plotChi(chi=[0.0,0.5,1.0],
-            model='bwh_tf',parset='bwh_set2',
+            model='bwh_to_EQK',parset='bwh_set2',
             pmax=10.0,DS=0.0002):
     chi02,ps2 = scanBif(chi=chi[0],parset=parset,pmax=pmax,model=model,DS=DS)
     chi05,ps5 = scanBif(chi=chi[1],parset=parset,pmax=pmax,model=model,DS=DS)

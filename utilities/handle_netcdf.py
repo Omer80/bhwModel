@@ -114,8 +114,8 @@ def create_animation(fname,output=None,showtime=True):
             h = rootgrp['h'][:,:]
             for i in xrange(len(t)):
                 line1, = ax[0].plot(x,b[i],'g-')
-                line2, = ax[1].plot(x,w[i],'g-')
-                line3, = ax[2].plot(x,h[i],'g-')
+                line2, = ax[1].plot(x,w[i],'b-')
+                line3, = ax[2].plot(x,h[i],'m-')
                 if showtime:
                     title = ax[0].text(0.5,1.05,r'$b$  at  $T={:5.2f} \, [yr]$'.format(t[i]/conv_T_to_t),
                                        size=plt.rcParams["axes.titlesize"],
@@ -143,8 +143,8 @@ def create_animation(fname,output=None,showtime=True):
             h = rootgrp['h'][:,:,:]
             for i in xrange(len(t)):
                 im1 = ax[0].imshow(b[i],cmap=plt.cm.YlGn, animated=True,vmin=0.0,vmax=1.0)
-                im2 = ax[1].imshow(w[i],cmap=plt.cm.YlGn, animated=True,vmin=0.0,vmax=1.0)
-                im3 = ax[2].imshow(h[i],cmap=plt.cm.YlGn, animated=True,vmin=0.0,vmax=1.0)
+                im2 = ax[1].imshow(w[i],cmap=plt.cm.Blues, animated=True,vmin=0.0,vmax=1.0)
+                im3 = ax[2].imshow(h[i],cmap=plt.cm.Purples, animated=True,vmin=0.0,vmax=1.0)
                 if showtime:
                     title = ax[1].text(1.6,1.3,r'$T={:5.2f} \, [yr]$'.format(t[i]/conv_T_to_t),
                                        size=plt.rcParams["axes.titlesize"],

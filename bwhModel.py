@@ -38,7 +38,7 @@ from utilities import handle_netcdf as hn
 #from space_integrals import lorentzian_kernel as lk
 import deepdish.io as dd
 
-Es_normal={'rhs':"oz_EQK",
+Es_normal={'rhs':"oz_EQK_relax",
         'n':(256,256),
         'l':(128.0,128.0),
         'bc':"periodic",
@@ -680,7 +680,7 @@ class bwhModel(object):
         self.state=result[-1]
         return time,result
     def pseudo_spectral_integrate(self,initial_state,step=0.1,finish=1000):
-#        print "Integration using pseudo-spectral step"
+        print("Integration using pseudo-spectral step")
         time = np.arange(0,finish+step,step)
         result=[]
         t=0
@@ -704,7 +704,7 @@ class bwhModel(object):
             result.append(self.state)
         return time,result
     def pseudo_spectral_integrate_relax(self,initial_state,step=0.1,finish=1000):
-#        print("Integration using pseudo-spectral relax step")
+        print("Integration using pseudo-spectral relax step")
         time = np.arange(0,finish+step,step)
         result=[]
         t=0

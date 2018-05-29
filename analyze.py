@@ -12,8 +12,8 @@ def simdrought(prec_i,prec_f,years,delta_year,chi,
                Ps=set2,
                n=(256,256),l=(128.0,128.0),
                Vs_initial="random",rhs="oz_EQK",
-               bc="neumann",it="pseudo_spectral",
-               first_time = 1000,tol=1.0e-8,add_noise=0.01,
+               bc="periodic",it="pseudo_spectral",
+               first_time = 100.0,tol=1.0e-8,add_noise=0.01,
                fname="cont",verbose=True):
     import deepdish.io as dd
     Es={'rhs':rhs,'n':n,'l':l,'bc':bc,'it':it,
@@ -23,9 +23,10 @@ def simdrought(prec_i,prec_f,years,delta_year,chi,
     time_span = np.arange(0,years+delta_year,delta_year)
     m = bwhModel(Vs=Vs_initial,Es=Es,Ps=Ps)
     m.setup['verbose']=verbose
+    yr=m.p['conv_T_to_t']
     # Converging on the first solution using integration and then root
     Vs_init = m.integrate(m.initial_state,check_convergence=True,
-                          max_time=first_time,p=prec_i,chi=chi)
+                          max_time=first_time*yr,p=prec_i,chi=chi)
     Vs = Vs_init.copy()
     prec_gradient_down = np.linspace(prec_i,prec_f,len(time_span))
     b_sol = np.zeros((len(prec_gradient_down),n[0],n[1]))
@@ -39,8 +40,9 @@ def simdrought(prec_i,prec_f,years,delta_year,chi,
             w=w+add_noise*np.random.random(size=w.shape)
             h=h+add_noise*np.random.random(size=h.shape)
         Vs = np.ravel((b,w,h))
-        Vs_new=m.integrate(initial_state=Vs,max_time=m.p['conv_T_to_t'],
-                           step=m.p['conv_T_to_t']/10.0,
+        Vs_new=m.integrate(initial_state=Vs,
+                           max_time=delta_year*yr,
+                           step=yr/10.0,
                            check_convergence=False,p=prec,chi=chi)
         b,w,h=m.split_state(Vs_new)
         b_sol[i]=b

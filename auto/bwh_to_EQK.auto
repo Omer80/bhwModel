@@ -1,0 +1,5 @@
+from bwh_tf import scanBif,plotChi
+chi0,ps0=scanBif(model='bwh_to_EQK',chi=0,DSMAX=0.00171)
+chi1,pschi1=scanBif(model='bwh_to_EQK',chi=1,DSMAX=0.00171)
+chi0hb = run(chi0('HB1'), IPS=2, ISP = 1,NPR=500,NMX=2000,DSMAX=0.005)
+chi1hb = run(chi1('HB1'), IPS=2, ISP = 1,NPR=500,NMX=2000,DSMAX=0.005)
