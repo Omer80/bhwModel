@@ -679,8 +679,10 @@ class bwhModel(object):
             result[i+1]=old
         self.state=result[-1]
         return time,result
-    def pseudo_spectral_integrate(self,initial_state,step=0.1,finish=1000):
-        print("Integration using pseudo-spectral step")
+    def pseudo_spectral_integrate(self,initial_state,step=0.1,finish=1000,**kwargs):
+#        print("Integration using pseudo-spectral step")
+        if kwargs:
+            self.update_parameters(kwargs)
         time = np.arange(0,finish+step,step)
         result=[]
         t=0
@@ -703,8 +705,10 @@ class bwhModel(object):
                 self.state=np.ravel((b,w,h))
             result.append(self.state)
         return time,result
-    def pseudo_spectral_integrate_relax(self,initial_state,step=0.1,finish=1000):
-        print("Integration using pseudo-spectral relax step")
+    def pseudo_spectral_integrate_relax(self,initial_state,step=0.1,finish=1000,**kwargs):
+#        print("Integration using pseudo-spectral relax step")
+        if kwargs:
+            self.update_parameters(kwargs)
         time = np.arange(0,finish+step,step)
         result=[]
         t=0
@@ -720,7 +724,7 @@ class bwhModel(object):
                 self.fftw = self.multw*(self.fftw + self.dt*fftn(self.dwdt(b,w,h,t,self.p['p'],self.p['chi'],self.p['a'],self.p['omegaf'])))#.real
                 b = ifftn(self.fftb).real
                 w = ifftn(self.fftw).real
-                h,flag=self.relax_h(h,verbose=0)
+                h,self.converged_relaxation=self.relax_h(h,verbose=0)
                 t+=self.dt
                 self.time_elapsed+=self.dt
                 self.state=np.ravel((b,w,h))
