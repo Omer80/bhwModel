@@ -53,6 +53,7 @@ int func (integer ndim, const doublereal *u, const integer *icp,
   w_fos=par[24+F2C];
   beta=par[25+F2C];
   chi=par[26+F2C];
+  del_to=par[27+F2C];
 
   //num_periods = par[17+F2C];
   L     = 1; //    = par[18+F2C];
@@ -67,7 +68,7 @@ int func (integer ndim, const doublereal *u, const integer *icp,
   Wx     = u[4];
   Hx     = u[5];
   
-  del_to = 0.3;
+  //del_to = 0.1;
   
   q_min   = q*(1.0-del_to);
   q_max   = q*(1.0+del_to);
@@ -126,7 +127,7 @@ int stpnt (integer ndim, doublereal x,
   FILE *myFile;
   myFile = fopen("bwh_tf_parameters.txt", "r");
   //read file into array
-  double numberArray[22];
+  double numberArray[23];
   int i = 0;
   while (fscanf(myFile, "%lf", &numberArray[i]) != EOF) // && i!=20)
   {
@@ -181,6 +182,7 @@ int stpnt (integer ndim, doublereal x,
   a=numberArray[19];
   delw=numberArray[20];
   delh=numberArray[21];
+  del_to=numberArray[22];
   // Calculating from the dimensional parameters
   //eta   = E*K;
   //nuw   = NW / M;
@@ -204,7 +206,7 @@ int stpnt (integer ndim, doublereal x,
   //beta  = 1;
   //chi   = 1;
   
-  del_to = 0.3;
+  
   
   q_min   = q*(1.0-del_to);
   q_max   = q*(1.0+del_to);
@@ -259,6 +261,7 @@ int stpnt (integer ndim, doublereal x,
   par[24+F2C] = w_fos;
   par[25+F2C] = beta;
   par[26+F2C] = chi;
+  par[27+F2C] = del_to;
 
 
   //par[17+F2C] = num_periods;

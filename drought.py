@@ -20,7 +20,7 @@ def simdrought(prec_i,prec_f,years_steps,delta_year,chi,
         'dt':0.1,'verbose':verbose,'analyze':False,'setPDE':True}
     if type(Vs_initial)==str:
         fname = fname+"_"+Vs_initial
-    time_span = np.arange(0,years_steps*delta_year+delta_year,delta_year)
+    time_span = np.arange(delta_year,years_steps*delta_year+delta_year,delta_year)
     m = bwhModel(Vs=Vs_initial,Es=Es,Ps=Ps)
     m.setup['verbose']=verbose
     yr=m.p['conv_T_to_t']
@@ -59,6 +59,7 @@ def simdrought(prec_i,prec_f,years_steps,delta_year,chi,
         h_sol[i]=h
     dd.save(fname+".hdf5",{'p':prec_gradient_down,"T":time_span,'chi':chi,
                            'Ps_dimensional':m.p['dimpar'],
+                           'n':n,'l':l,
                            'b':b_sol,
                            'w':w_sol,
                            'h':h_sol},
@@ -150,12 +151,12 @@ def add_parser_arguments(parser):
     parser.add_argument('--years_steps',
                         dest='years_steps',
                         type=int,
-                        default=6,
+                        default=10,
                         help='Number of years')
     parser.add_argument('--delta_year',
                         dest='delta_year',
                         type=int,
-                        default=40,
+                        default=20,
                         help='Number of years')
     return parser
 

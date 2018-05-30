@@ -3,7 +3,7 @@ unames = {1:'B', 2:'W', 3:'H',4:'Bx',5:'Wx',6:'Hx'}
 parnames = {1:'eta', 2:'nuw', 3:'nuh', 4:'rhow', 5:'rhoh', 6:'gamma',
             7:'alpha', 8:'q',9:'f',11:'L',16:'p', 17:'delw', 18:'delh',
             20:'lamb_min',21::'lamb_max',22:'mu_s_max',23:'w_wp',
-            24:'w_fos',25:'beta',26:'chi'}
+            24:'w_fos',25:'beta',26:'chi',27:'del_to'}
 NDIM = 6,   IPS = 1, IRS = 0, ILP = 1
 ICP  = ['p',13]
 NTST = 800, NCOL = 4, IAD = 3, ISP = 2, ISW = 1, IPLT = 1, NBC = 4, NINT = 0

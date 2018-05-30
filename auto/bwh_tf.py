@@ -132,7 +132,7 @@ def conv_dict_to_parset_array(ps):
                   ps['w_wp'],ps['w_fos'],ps['w_fc'],
                   ps['mu_s_max'],ps['omegaf'],
                   ps['chi'],ps['beta'],ps['a'],
-                  ps['dw'],ps['dh']])
+                  ps['dw'],ps['dh'],ps['del_to']])
     return a
 def save_parset_to_txt_file(a):
     np.savetxt("bwh_tf_parameters.txt",a.T)
