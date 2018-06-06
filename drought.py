@@ -8,7 +8,7 @@ Created on Tue May 15 07:08:40 2018
 from bwhModel import bwhModel
 import numpy as np
 set2 = 'auto/bwh_set2.hdf5'
-def simdrought(prec_i,prec_f,years_steps,delta_year,chi,
+def simdrought(prec_i,prec_f,delta_p,delta_year,chi,
                Ps=set2,
                n=(512,512),l=(256.0,256.0),
                Vs_initial="random",rhs="oz_EQK",
@@ -20,7 +20,8 @@ def simdrought(prec_i,prec_f,years_steps,delta_year,chi,
         'dt':0.1,'verbose':verbose,'analyze':False,'setPDE':True}
     if type(Vs_initial)==str:
         fname = fname+"_"+Vs_initial
-    time_span = np.arange(delta_year,years_steps*delta_year+delta_year,delta_year)
+    prec_gradient_down = np.arange(prec_i,prec_f-delta_p,-delta_p)
+    time_span = np.arange(delta_year,len(prec_gradient_down)*delta_year+delta_year,delta_year)
     m = bwhModel(Vs=Vs_initial,Es=Es,Ps=Ps)
     m.setup['verbose']=verbose
     yr=m.p['conv_T_to_t']
@@ -31,7 +32,6 @@ def simdrought(prec_i,prec_f,years_steps,delta_year,chi,
     m = bwhModel(Vs=Vs_initial,Es=Es,Ps=Ps)
     m.setup['verbose']=verbose
     Vs = Vs_init.copy()
-    prec_gradient_down = np.linspace(prec_i,prec_f,len(time_span))
     b_sol = np.zeros((len(prec_gradient_down),n[0],n[1]))
     w_sol = np.zeros((len(prec_gradient_down),n[0],n[1]))
     h_sol = np.zeros((len(prec_gradient_down),n[0],n[1]))
@@ -41,7 +41,7 @@ def simdrought(prec_i,prec_f,years_steps,delta_year,chi,
         if add_noise is not None:
             b=b+add_noise*np.random.random(size=b.shape)
             w=w+add_noise*np.random.random(size=w.shape)
-            h=h+add_noise*np.random.random(size=h.shape)
+#            h=h+add_noise*np.random.random(size=h.shape)
         Vs = np.ravel((b,w,h))
         time,result=m.pseudo_spectral_integrate_relax(initial_state=Vs,
                                                       finish=delta_year*yr,
@@ -66,7 +66,7 @@ def simdrought(prec_i,prec_f,years_steps,delta_year,chi,
             compression='blosc')
 
 def main(args):
-    simdrought(args.prec_i,args.prec_f,args.years_steps,
+    simdrought(args.prec_i,args.prec_f,args.delta_p,
                args.delta_year,args.chi,
                fname=args.fname,verbose=args.verbose,add_noise=args.noise)
     return 0
@@ -146,12 +146,12 @@ def add_parser_arguments(parser):
     parser.add_argument('--prec_f',
                         dest='prec_f',
                         type=float,
-                        default=0.5,
+                        default=1.0,
                         help='Final value for precipitation')
-    parser.add_argument('--years_steps',
-                        dest='years_steps',
+    parser.add_argument('--delta_p',
+                        dest='delta_p',
                         type=int,
-                        default=10,
+                        default=0.25,
                         help='Number of years')
     parser.add_argument('--delta_year',
                         dest='delta_year',

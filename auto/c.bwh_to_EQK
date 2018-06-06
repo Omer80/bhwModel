@@ -6,7 +6,7 @@ parnames = {1:'eta', 2:'nuw', 3:'nuh', 4:'rhow', 5:'rhoh', 6:'gamma',
             24:'w_fos',25:'beta',26:'chi',27:'del_to'}
 NDIM = 6,   IPS = 1, IRS = 0, ILP = 1
 ICP  = ['p',13]
-NTST = 800, NCOL = 4, IAD = 3, ISP = 2, ISW = 1, IPLT = 1, NBC = 4, NINT = 0
+NTST = 800, NCOL = 4, IAD = 3, ISP = 2, ISW = 1, IPLT = 7, NBC = 4, NINT = 0
 NMX = 500, RL0 = -100.0, RL1 = 2000.0, A0 = -0.01, A1 = 1000.0  
 NPR = 500, MXBF =  10, IID = 2, ITMX = 24, ITNW = 15, NWTN = 9, JAC = 0
 EPSL = 1e-07, EPSU = 1e-07, EPSS = 1e-05
