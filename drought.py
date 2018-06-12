@@ -151,12 +151,12 @@ def add_parser_arguments(parser):
     parser.add_argument('--delta_p',
                         dest='delta_p',
                         type=int,
-                        default=0.25,
+                        default=0.125,
                         help='Number of years')
     parser.add_argument('--delta_year',
                         dest='delta_year',
                         type=int,
-                        default=20,
+                        default=40,
                         help='Number of years')
     return parser
 

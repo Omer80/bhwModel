@@ -38,9 +38,9 @@ from utilities import handle_netcdf as hn
 #from space_integrals import lorentzian_kernel as lk
 import deepdish.io as dd
 
-Es_normal={'rhs':"oz_EQK_relax",
-        'n':(256,256),
-        'l':(128.0,128.0),
+Es_normal={'rhs':"oz_EQK",
+        'n':(256,),
+        'l':(128.0,),
         'bc':"periodic",
         'it':"pseudo_spectral",
         'dt':0.1,
@@ -687,7 +687,7 @@ class bwhModel(object):
         result=[]
         t=0
         result.append(initial_state)
-        for tout in time[1:]:
+        for i,tout in enumerate(time[1:]):
             self.state=result[-1]
             b,w,h=self.state.reshape(self.setup['nvar'],*self.setup['n'])
             self.fftb=fftn(b)
@@ -703,6 +703,8 @@ class bwhModel(object):
                 t+=self.dt
                 self.time_elapsed+=self.dt
                 self.state=np.ravel((b,w,h))
+            if self.verbose:
+                print ("tout {}, <b> = {:3.2f}, diff = {:4.3f}".format(tout,np.mean(b),np.amax(self.state-result[i-1])))
             result.append(self.state)
         return time,result
     def pseudo_spectral_integrate_relax(self,initial_state,step=0.1,finish=1000,**kwargs):
@@ -713,7 +715,7 @@ class bwhModel(object):
         result=[]
         t=0
         result.append(initial_state)
-        for tout in time[1:]:
+        for i,tout in enumerate(time[1:]):
             self.state=result[-1]
             b,w,h=self.state.reshape(self.setup['nvar'],*self.setup['n'])
             self.fftb=fftn(b)
@@ -728,6 +730,8 @@ class bwhModel(object):
                 t+=self.dt
                 self.time_elapsed+=self.dt
                 self.state=np.ravel((b,w,h))
+            if self.verbose:
+                print ("tout {}, <b> = {:3.2f}, diff = {:4.3f}".format(tout,np.mean(b),np.amax(self.state-result[i-1])))
             result.append(self.state)
         return time,result
 
