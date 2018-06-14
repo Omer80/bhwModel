@@ -90,7 +90,7 @@ def loadParmSet(fname):
 if __name__ == '__main__':
     from scipy.io import savemat
     par=update_par()
-    name = 'bwh_set2'
+    name = 'bwh_set3'
     par['pc']=par['nuw'] * ( (par['alpha'] * par['f']) + par['nuh'])/ (par['alpha'] * par['f'])
     print "Nondimensional:",
     print par

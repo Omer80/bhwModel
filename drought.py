@@ -14,8 +14,11 @@ def simdrought(prec_i,prec_f,delta_p,delta_year,chi,
                Vs_initial="random",rhs="oz_EQK",
                bc="periodic",it="pseudo_spectral",
                first_time = 100.0,tol=1.0e-8,add_noise=0.01,
-               fname="cont",verbose=True):
+               fname="cont",verbose=True,send_email=None):
     import deepdish.io as dd
+    if send_email is not None:
+        import getpass
+        pswd = getpass.getpass('Password:')
     Es={'rhs':rhs,'n':n,'l':l,'bc':bc,'it':it,
         'dt':0.1,'verbose':verbose,'analyze':False,'setPDE':True}
     if type(Vs_initial)==str:
@@ -64,11 +67,30 @@ def simdrought(prec_i,prec_f,delta_p,delta_year,chi,
                            'w':w_sol,
                            'h':h_sol},
             compression='blosc')
+    if send_email is not None:
+        try:
+            import smtplib
+            from socket import gaierror
+            server = smtplib.SMTP('smtp.gmail.com', 587)
+            server.ehlo()
+            server.starttls()
+            server.login(send_email, pswd)
+            msg = "\r\n".join([
+                    "From: {}".format(send_email),
+                    "To: {}".format(send_email),
+                    "Subject: Drought bwh simulations finished",
+                    "",
+                    "Drought bwh simulations finished and saved to:", fname
+                    ])
+            server.sendmail(send_email, send_email, msg)
+            server.quit()
+        except gaierror:
+            pass
 
 def main(args):
     simdrought(args.prec_i,args.prec_f,args.delta_p,
-               args.delta_year,args.chi,
-               fname=args.fname,verbose=args.verbose,add_noise=args.noise)
+               args.delta_year,args.chi,add_noise=args.noise,
+               fname=args.fname,verbose=args.verbose,send_email=args.send_email)
     return 0
 
 def add_parser_arguments(parser):
@@ -128,6 +150,11 @@ def add_parser_arguments(parser):
 #                        default=False,
 #                        help="Make a movie")
     #prec_i,prec_f,years,delta_year,chi
+    parser.add_argument("--send_email",
+                        type=str, nargs='?',
+                        dest="send_email",
+                        default=None,
+                        help="Password to send email notice")
     parser.add_argument('--chi',
                         dest='chi',
                         type=float,
