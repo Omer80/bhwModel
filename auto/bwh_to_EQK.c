@@ -24,8 +24,8 @@ int func (integer ndim, const doublereal *u, const integer *icp,
   doublereal pi, num_periods,L,powH;
   doublereal G,I,tras,evapw,evaph,sigma,a;
   doublereal chi,beta,gamma_tf,mu_s;
-  doublereal q_to,eta_to,K_to,del_to;
-  doublereal q_min,q_max,eta_min,eta_max,K_min,K_max;
+  doublereal q_to,eta_to,K_to,del_to,rho_to;
+  doublereal q_min,q_max,eta_min,eta_max,K_min,K_max,rho_min,rho_max;
   doublereal w_wp,w_fos,mu_s_max,mu,midlamb,lamb_max,lamb_min,lamb;
   pi = atan(1.) * 4.0;  
   /* Defining the parameters */
@@ -76,11 +76,16 @@ int func (integer ndim, const doublereal *u, const integer *icp,
   eta_max = eta*(1.0+del_to);
   K_min   = (1.0-del_to);
   K_max   = (1.0+del_to);
+  rho_min = (1.0-del_to);
+  rho_max = (1.0+del_to);
   
   K_to   = K_max    + pow(chi,beta)*(K_min-K_max);
+  rho_to = rho_max  + pow(chi,beta)*(rho_min-rho_max);
   q_to   = (q_max    + pow(chi,beta)*(q_min-q_max))/K_to;
   eta_to = (eta_max  + pow((1-chi),beta)*(eta_min-eta_max))*K_to;
   gam    = gam*K_to;
+  //rhow = rhow*rho_to;
+  //rhoh = rhoh*rho_to;
   
   G = W*(1 + eta_to*B)*(1 + eta_to*B);
   I = (alpha*((B + q_to*ff)/(B + q_to)));
