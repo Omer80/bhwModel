@@ -55,7 +55,7 @@ def simdrought(prec_i,prec_f,delta_p,delta_year,chi,
         Vs_new=m.integrate(initial_state=Vs,
                            max_time=delta_year*yr,step=yr,
                            check_convergence=False,
-                           savefile=savefile,create_movie=create_movie,
+                           savefile=savefile,create_movie=False,
                            p=prec,chi=chi)
         if m.converged_relaxation==False:
             time,result=m.pseudo_spectral_integrate(initial_state=Vs,
