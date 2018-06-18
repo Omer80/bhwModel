@@ -14,7 +14,9 @@ def simdrought(prec_i,prec_f,delta_p,delta_year,chi,
                Vs_initial="random",rhs="oz_EQK",
                bc="periodic",it="pseudo_spectral",
                first_time = 100.0,tol=1.0e-8,add_noise=0.01,
-               fname="cont",verbose=True,send_email=None):
+               fname="cont",verbose=True,
+               savefile=None,create_movie=False,
+               send_email=None):
     import deepdish.io as dd
     if send_email is not None:
         import getpass
@@ -38,24 +40,29 @@ def simdrought(prec_i,prec_f,delta_p,delta_year,chi,
     b_sol = np.zeros((len(prec_gradient_down),n[0],n[1]))
     w_sol = np.zeros((len(prec_gradient_down),n[0],n[1]))
     h_sol = np.zeros((len(prec_gradient_down),n[0],n[1]))
+    if create_movie and savefile is not None:
+        savefile_base=savefile
     for i,prec in enumerate(prec_gradient_down):
         print "Integration for p =",prec
+        if create_movie and savefile is not None:
+            savefile=savefile_base+"_p{:4.3f}".format(prec).replace(".","_")
         b,w,h=m.split_state(Vs)
         if add_noise is not None:
             b=b+add_noise*np.random.random(size=b.shape)
             w=w+add_noise*np.random.random(size=w.shape)
 #            h=h+add_noise*np.random.random(size=h.shape)
         Vs = np.ravel((b,w,h))
-        time,result=m.pseudo_spectral_integrate_relax(initial_state=Vs,
-                                                      finish=delta_year*yr,
-                                                      step=yr,
-                                                      p=prec,chi=chi)
+        Vs_new=m.integrate(initial_state=Vs,
+                           max_time=delta_year*yr,step=yr,
+                           check_convergence=False,
+                           savefile=savefile,create_movie=create_movie,
+                           p=prec,chi=chi)
         if m.converged_relaxation==False:
             time,result=m.pseudo_spectral_integrate(initial_state=Vs,
                                                     finish=delta_year*yr,
                                                     step=yr,
                                                     p=prec,chi=chi)
-        Vs_new=result[-1]
+            Vs_new=result[-1]
         b,w,h=m.split_state(Vs_new)
         b_sol[i]=b
         w_sol[i]=w
@@ -90,6 +97,7 @@ def simdrought(prec_i,prec_f,delta_p,delta_year,chi,
 def main(args):
     simdrought(args.prec_i,args.prec_f,args.delta_p,
                args.delta_year,args.chi,add_noise=args.noise,
+               create_movie=args.create_movie,savefile=args.savefile,
                fname=args.fname,verbose=args.verbose,send_email=args.send_email)
     return 0
 
@@ -99,6 +107,11 @@ def add_parser_arguments(parser):
                         dest="verbose",
                         default=False,
                         help="Turn on debuging messages")
+    parser.add_argument("--create_movie",
+                        action="store_true",
+                        dest="create_movie",
+                        default=False,
+                        help="Create movie at each simulation")
 #    parser.add_argument("--check_convergence",
 #                        action="store_true",
 #                        dest="check_convergence",
@@ -155,6 +168,11 @@ def add_parser_arguments(parser):
                         dest="send_email",
                         default=None,
                         help="Password to send email notice")
+    parser.add_argument("--savefile",
+                        type=str, nargs='?',
+                        dest="savefile",
+                        default=None,
+                        help="Save each simulation to base name")
     parser.add_argument('--chi',
                         dest='chi',
                         type=float,
@@ -177,7 +195,7 @@ def add_parser_arguments(parser):
                         help='Final value for precipitation')
     parser.add_argument('--delta_p',
                         dest='delta_p',
-                        type=int,
+                        type=float,
                         default=0.125,
                         help='Number of years')
     parser.add_argument('--delta_year',

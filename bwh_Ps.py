@@ -45,6 +45,7 @@ def update_par():
            'gamma'    : (dimpar['Gamma']*dimpar['K'])/dimpar['M0'],
            'dw'       : dimpar['DW']/dimpar['DB'],
            'conv_T_to_t'   : dimpar['M0'],
+           'conv_p_to_P'   : (dimpar['M0']**2)/dimpar['Lambda_max'],
            'dh'       : (dimpar['DH'] * dimpar['M0']) / (dimpar['DB'] * dimpar['Lambda_max']),
            'w_wp'     : dimpar['s_wp']*(dimpar['nZ']*dimpar['Lambda_max'])/dimpar['M0'],
            'w_fos'    : dimpar['s_fos']*(dimpar['nZ']*dimpar['Lambda_max'])/dimpar['M0'],
