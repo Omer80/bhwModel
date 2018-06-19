@@ -33,9 +33,9 @@ def simdrought(prec_i,prec_f,delta_p,delta_year,chi,
     # Converging on the first solution using integration and then root
     Vs_init = m.integrate(m.initial_state,check_convergence=True,
                           max_time=first_time*yr,p=prec_i,chi=chi)
-#    Es['rhs']="oz_EQK_relax"
-#    m = bwhModel(Vs=Vs_initial,Es=Es,Ps=Ps)
-#    m.setup['verbose']=verbose
+    Es['rhs']="oz_EQK_relax"
+    m = bwhModel(Vs=Vs_initial,Es=Es,Ps=Ps)
+    m.setup['verbose']=verbose
     Vs = Vs_init.copy()
     b_sol = np.zeros((len(prec_gradient_down),n[0],n[1]))
     w_sol = np.zeros((len(prec_gradient_down),n[0],n[1]))
@@ -57,12 +57,12 @@ def simdrought(prec_i,prec_f,delta_p,delta_year,chi,
                            check_convergence=False,
                            savefile=savefile,create_movie=False,
                            p=prec,chi=chi)
-#        if m.converged_relaxation==False:
-#            time,result=m.pseudo_spectral_integrate(initial_state=Vs,
-#                                                    finish=delta_year*yr,
-#                                                    step=yr,
-#                                                    p=prec,chi=chi)
-#            Vs_new=result[-1]
+        if m.converged_relaxation==False:
+            time,result=m.pseudo_spectral_integrate(initial_state=Vs,
+                                                    finish=delta_year*yr,
+                                                    step=yr,
+                                                    p=prec,chi=chi)
+            Vs_new=result[-1]
         b,w,h=m.split_state(Vs_new)
         b_sol[i]=b
         w_sol[i]=w
