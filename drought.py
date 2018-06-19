@@ -57,12 +57,12 @@ def simdrought(prec_i,prec_f,delta_p,delta_year,chi,
                            check_convergence=False,
                            savefile=savefile,create_movie=False,
                            p=prec,chi=chi)
-        if m.converged_relaxation==False:
-            time,result=m.pseudo_spectral_integrate(initial_state=Vs,
-                                                    finish=delta_year*yr,
-                                                    step=yr,
-                                                    p=prec,chi=chi)
-            Vs_new=result[-1]
+#        if m.converged_relaxation==False:
+#            time,result=m.pseudo_spectral_integrate(initial_state=Vs,
+#                                                    finish=delta_year*yr,
+#                                                    step=yr,
+#                                                    p=prec,chi=chi)
+#            Vs_new=result[-1]
         b,w,h=m.split_state(Vs_new)
         b_sol[i]=b
         w_sol[i]=w

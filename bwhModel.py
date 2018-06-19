@@ -63,6 +63,7 @@ class bwhModel(object):
             self.Psfname=None
             self.p = Ps
         self.setup=Es
+#        self.converged_relaxation=True
 #        self.Vs=Vs
         self.verbose=Es['verbose']
         if self.verbose:
