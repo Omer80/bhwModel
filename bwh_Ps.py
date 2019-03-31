@@ -54,6 +54,7 @@ def update_par():
            'chi'      : 0.5,
            'beta'     : 1.0,
            'omegaf'   : 1.0,
+           'n'   : 1.0,
            'a'        : dimpar['seasonality'],
            'dimpar'   : dimpar
            }

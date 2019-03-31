@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 """
-#  bwhModel.py
+#  bwhModel3.py
 #
 #  Two layers model
 #
@@ -29,16 +29,16 @@ from sympy import symbols, Matrix,lambdify
 from sympy.utilities.autowrap import ufuncify
 import numpy as np
 import scipy.linalg as linalg
-from scipy.integrate import odeint,ode
+from scipy.integrate import odeint,solve_ivp
 from scipy.fftpack import fftn, ifftn
 import scipy.sparse as sparse
 #import netCDF4 as netcdf
-from utilities import handle_netcdf as hn
+from utilities import handle_netcdf3 as hn
 #from scipy.io import netcdf
 import deepdish.io as dd
 #from tlm_parameters import par
 
-Es_normal={'rhs':"oz",
+Es_normal={'rhs':"oz_EQK",
         'n':(1024,),
         'l':(256.0,),
         'bc':"neumann",
@@ -50,7 +50,7 @@ Es_normal={'rhs':"oz",
 
 def main():
     global m,p
-    m = bwhModel(Es=Es_normal,Ps='auto/bwh_set1.hdf5',Vs="random")
+    m = bwhModel(Es=Es_normal,Ps='auto/bwh_set3.hdf5',Vs="random")
     return 0
 
 class bwhModel(object):
@@ -84,7 +84,7 @@ class bwhModel(object):
             self.dx2 = self.dx**2
             self.dt=Es['dt']*self.dx2 / self.p['dh']
             self.X = np.linspace(0,Es['l'][0],Es['n'][0])
-            from utilities.laplacian_sparse import create_laplacian #,create_gradient
+            from utilities.laplacian_sparse3 import create_laplacian #,create_gradient
             self.lapmat=create_laplacian(self.setup['n'],self.setup['l'], self.setup['bc'] , [1.0,self.p['dw'],self.p['dh']],verbose=self.verbose)
 #            self.gradmat=create_gradient(self.setup['n'],self.setup['l'], self.setup['bc'] , [1.0,self.p['Dw'],self.p['Dh']])
             self.set_integrator()
@@ -140,6 +140,65 @@ class bwhModel(object):
             self.dbdt_eq  = self.lamb*g*w*b*(1.0-b)-self.mu*b
             self.dwdt_eq = i*h-evap-tras
             self.dhdt_eq = self.p_t_eq-i*h
+        elif self.setup['rhs']=="oz_EQK":
+            """ oz with tradeoff between E and K, with Q proportional to K
+            Meaning that the higher K is, the Q is higher, and the Infitration 
+            is lower. 
+            """
+            b,w,h = symbols('b w h')
+            self.Vs_symbols = [b,w,h]
+            self.setup['Vs_symbols'] = b,w,h
+            self.setup['nvar']=len(self.setup['Vs_symbols'])
+            from sympy.functions import cos as symcos
+#            from sympy.functions import exp as symexp
+            q_min   = p['q']*(1.0-p['del_to'])
+            q_max   = p['q']*(1.0+p['del_to'])
+            eta_min = p['eta']*(1.0-p['del_to'])
+            eta_max = p['eta']*(1.0+p['del_to'])
+            K_min   = (1.0-p['del_to'])
+            K_max   = (1.0+p['del_to'])
+            K_to   = K_max    + p['chi']*(K_min-K_max)
+            q_to   = (q_max   + p['chi']*(q_min-q_max))/K_to
+            eta_to = (eta_max + (1.0-p['chi'])*(eta_min-eta_max))*K_to
+            gam    = p['gamma']*K_to
+            G = w*(1.0 + eta_to*b)*(1.0 + eta_to*b)
+            I = (p['alpha']*((b + q_to*p['f'])/(b + q_to)))
+            evapw = p['n']*((p['nuw'])/(1.0 + p['rhow']*b))*w
+            evaph = p['n']*((p['nuh'])/(1.0 + p['rhoh']*b))*h
+            tras  = gam*b*G
+            self.p_t_eq = p['p']*(1.0+p['a']*symcos(2.0*np.pi*p['omegaf']*t/p['conv_T_to_t']))
+            self.dbdt_eq=G*b*(1.0-b) - b
+            self.dwdt_eq=I*h - evapw - tras
+            self.dhdt_eq=self.p_t_eq - I*h - evaph
+            self.conv_K = lambdify((b,p['chi']),self.sub_parms(b*K_to),"numpy",dummify=False)
+        elif self.setup['rhs']=="oz_EQK_relax":
+            """ Ms version tradeoff of Lambda with Ms AND Gamma
+            """
+            b,w,h = symbols('b w h')
+            self.Vs_symbols = [b,w,h]
+            self.setup['Vs_symbols'] = b,w,h
+            self.setup['nvar']=len(self.setup['Vs_symbols'])
+            from sympy.functions import cos as symcos
+#            from sympy.functions import exp as symexp
+            q_min   = p['q']*(1.0-p['del_to'])
+            q_max   = p['q']*(1.0+p['del_to'])
+            eta_min = p['eta']*(1.0-p['del_to'])
+            eta_max = p['eta']*(1.0+p['del_to'])
+            K_min   = (1.0-p['del_to'])
+            K_max   = (1.0+p['del_to'])
+            K_to    = K_max    + p['chi']*(K_min-K_max)
+            q_to    = (q_max   + p['chi']*(q_min-q_max))/K_to
+            eta_to  = (eta_max + (1.0-p['chi'])*(eta_min-eta_max))*K_to
+            gam     = p['gamma']*K_to
+            G = w*(1.0 + eta_to*b)*(1.0 + eta_to*b)
+            I = (p['alpha']*((b + q_to*p['f'])/(b + q_to)))
+            evapw = ((p['nuw'])/(1.0 + p['rhow']*b))*w
+            evaph = ((p['nuh'])/(1.0 + p['rhoh']*b))*h
+            tras  = gam*b*G
+            self.dbdt_eq=G*b*(1.0-b) - b
+            self.dwdt_eq=I*h - evapw - tras
+            self.dhdt_eq= - I*h - evaph
+            self.conv_K = lambdify((b,p['chi']),self.sub_parms(b*K_to),"numpy",dummify=False)
         """ Creating numpy functions """
         symeqs = Matrix([self.dbdt_eq,self.dwdt_eq,self.dhdt_eq])
         self.ode  = lambdify((b,w,h,t,p['p'],p['chi'],p['a'],p['omegaf']),self.sub_parms(symeqs),"numpy",dummify=False)
@@ -227,6 +286,13 @@ class bwhModel(object):
             if key!='p' and key!='chi' and key!='a' and key!='omegaf':
                 eqs=eqs.subs(self.Ps_symbols[key],self.p[key])
         return eqs
+    def calc_P_PET(self,p,w):
+        P = self.p['dimpar']
+        W = P['M0']/P['Lambda_max']*w
+        PET = W*(P['NW']+P['Gamma']*(1+P['E']*P['K'])**2)
+        PREC = p*self.p['conv_p_to_P']
+        return PREC,PET
+        
 
     """ Spatial functions """
     def set_integrator(self):
@@ -261,7 +327,7 @@ class bwhModel(object):
         return self.ode(b,w,h,t,self.p['p'],self.p['chi'],self.p['a'],self.p['omegaf']).T[0]
     def scipy_ode_rhs(self,t,state):
         b,w,h=state
-        return self.ode(b,w,h,t,self.p['p'],self.p['chi'],self.p['a'],self.p['omegaf'])
+        return np.squeeze(self.ode(b,w,h,t,self.p['p'],self.p['chi'],self.p['a'],self.p['omegaf']))
     def scipy_ode_jac(self,t,state):
         b,w,h=state
         return self.localJac(b,w,h,t,self.p['p'],self.p['chi'],self.p['a'],self.p['omegaf'])
@@ -399,21 +465,19 @@ class bwhModel(object):
         t = np.arange(0,finish+step, step)
         self.time_elapsed+=finish
         return t,odeint(self.rhs_pde, initial_state, t)
-    def ode_integrate_bdf(self,initial_state=None,step=0.1,start=0,finish=1000,
-                          max_dt=10.0e-3,max_order=15,**kwargs):
+    def ode_integrate(self,initial_state,step=0.1,start=0,finish=1000,
+                          method='BDF',**kwargs):
+        """ Using the new scipy interface to BDF method for stiff equations
+        with option to switch to other methods
+        """
         if kwargs:
             self.update_parameters(kwargs)
-        r = ode(self.scipy_ode_rhs, self.scipy_ode_jac).set_integrator('lsoda',max_step=max_dt, method='bdf', max_order_s=max_order)
-        r.set_initial_value(initial_state, 0)
-        t = []
-        result = []
-        t.append(start)
-        result.append(initial_state)
-        while r.successful() and r.t < finish:
-            t.append(r.t+step)
-            result.append(r.integrate(r.t+step))
-        return np.array(t),np.array(result).T
-    def ode_integrate(self,initial_state,step=0.1,start=0,finish=1000,**kwargs):
+        t = np.arange(start,finish+step, step)
+        sol=solve_ivp(fun=self.scipy_ode_rhs,t_span=(start,finish),
+                      y0=initial_state,method=method,
+                      t_eval=t,jac=self.scipy_ode_jac)
+        return sol.t,sol.y
+    def ode_integrate_old(self,initial_state,step=0.1,start=0,finish=1000,**kwargs):
         """ """
         if kwargs:
             self.update_parameters(kwargs)

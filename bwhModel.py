@@ -51,7 +51,7 @@ Es_normal={'rhs':"oz_EQK_relax",
 
 def main():
     global m,p
-    m = bwhModel(Es=Es_normal,Ps='auto/bwh_set2.hdf5',Vs="random")
+    m = bwhModel(Es=Es_normal,Ps='auto/bwh_set3.hdf5',Vs="random")
     return m
 
 class bwhModel(object):
@@ -142,7 +142,9 @@ class bwhModel(object):
             self.dwdt_eq = I*h - evapw - tras
             self.dhdt_eq = self.p_t_eq-evaph-I*h
         elif self.setup['rhs']=="oz_EQK":
-            """ Ms version tradeoff of Lambda with Ms AND Gamma
+            """ oz with tradeoff between E and K, with Q proportional to K
+            Meaning that the higher K is, the Q is higher, and the Infitration 
+            is lower. 
             """
             b,w,h = symbols('b w h')
             self.Vs_symbols = [b,w,h]
@@ -162,8 +164,8 @@ class bwhModel(object):
             gam    = p['gamma']*K_to
             G = w*(1.0 + eta_to*b)*(1.0 + eta_to*b)
             I = (p['alpha']*((b + q_to*p['f'])/(b + q_to)))
-            evapw = ((p['nuw'])/(1.0 + p['rhow']*b))*w
-            evaph = ((p['nuh'])/(1.0 + p['rhoh']*b))*h
+            evapw = p['n']*((p['nuw'])/(1.0 + p['rhow']*b))*w
+            evaph = p['n']*((p['nuh'])/(1.0 + p['rhoh']*b))*h
             tras  = gam*b*G
             self.p_t_eq = p['p']*(1.0+p['a']*symcos(2.0*np.pi*p['omegaf']*t/p['conv_T_to_t']))
             self.dbdt_eq=G*b*(1.0-b) - b
@@ -200,10 +202,10 @@ class bwhModel(object):
             print("No such rhs choice!")
         """ Creating numpy functions """
         self.symeqs = Matrix([self.dbdt_eq,self.dwdt_eq,self.dhdt_eq])
-        self.ode  = lambdify((b,w,h,t,p['p'],p['chi'],p['a'],p['omegaf']),self.sub_parms(self.symeqs),"numpy",dummify=False)
-        self.dbdt = ufuncify([b,w,h,t,p['p'],p['chi'],p['a'],p['omegaf']],[self.sub_parms(self.dbdt_eq)])
-        self.dwdt = ufuncify([b,w,h,t,p['p'],p['chi'],p['a'],p['omegaf']],[self.sub_parms(self.dwdt_eq)])
-        self.dhdt = ufuncify([b,w,h,t,p['p'],p['chi'],p['a'],p['omegaf']],[self.sub_parms(self.dhdt_eq)])
+        self.ode  = lambdify((b,w,h,t,p['p'],p['n'],p['chi'],p['a'],p['omegaf']),self.sub_parms(self.symeqs),"numpy",dummify=False)
+        self.dbdt = ufuncify([b,w,h,t,p['p'],p['n'],p['chi'],p['a'],p['omegaf']],[self.sub_parms(self.dbdt_eq)])
+        self.dwdt = ufuncify([b,w,h,t,p['p'],p['n'],p['chi'],p['a'],p['omegaf']],[self.sub_parms(self.dwdt_eq)])
+        self.dhdt = ufuncify([b,w,h,t,p['p'],p['n'],p['chi'],p['a'],p['omegaf']],[self.sub_parms(self.dhdt_eq)])
         if self.setup['rhs']=="oz_relax" or self.setup['rhs']=="oz_EQK_relax":
             def dhdt_p_loc(b,w,h,t,p,chi,a,omegaf):
                 return p+self.dhdt(b,w,h,t,p,chi,a,omegaf)
@@ -293,7 +295,7 @@ class bwhModel(object):
         b,w,h,t = symbols('b w h t')
         for key in self.p.keys():
 #            print key
-            if key!='p' and key!='chi' and key!='a' and key!='omegaf':
+            if key!='p' and key!='n' and key!='chi' and key!='a' and key!='omegaf':
                 eqs=eqs.subs(self.Ps_symbols[key],self.p[key])
         return eqs
 
@@ -357,24 +359,24 @@ class bwhModel(object):
 
     def rhs_pde_normal(self,state,t=0):
         b,w,h=np.split(state,self.setup['nvar'])
-        return np.ravel((self.dbdt(b,w,h,t,self.p['p'],self.p['chi'],
+        return np.ravel((self.dbdt(b,w,h,t,self.p['p'],self.p['n'],self.p['chi'],
                                    self.p['a'],self.p['omegaf']),
-                         self.dwdt(b,w,h,t,self.p['p'],self.p['chi'],
+                         self.dwdt(b,w,h,t,self.p['p'],self.p['n'],self.p['chi'],
                                    self.p['a'],self.p['omegaf']),
-                         self.dhdt(b,w,h,t,self.p['p'],self.p['chi'],
+                         self.dhdt(b,w,h,t,self.p['p'],self.p['n'],self.p['chi'],
                                    self.p['a'],self.p['omegaf']))) + self.lapmat*state
     
     def rhs_pde_relax(self,state):
         b,w,h=np.split(state,self.setup['nvar'])
-        return np.ravel((self.dbdt(b,w,h,self.t,self.p['p'],self.p['chi'],
+        return np.ravel((self.dbdt(b,w,h,self.t,self.p['p'],self.p['n'],self.p['chi'],
                                    self.p['a'],self.p['omegaf']),
-                         self.dwdt(b,w,h,self.t,self.p['p'],self.p['chi'],
+                         self.dwdt(b,w,h,self.t,self.p['p'],self.p['n'],self.p['chi'],
                                    self.p['a'],self.p['omegaf']))) + self.lapmat*np.ravel((b,w))
     
     def rhs_h_eq_relax(self,h):
         b,w,hh=np.split(self.state,self.setup['nvar'])
         return np.ravel((self.dhdt_p(b,w,h,self.time_elapsed,
-                                     self.p['p'],self.p['chi'],
+                                     self.p['p'],self.p['n'],self.p['chi'],
                                      self.p['a'],self.p['omegaf']))) + self.lapmat_h*(h**2)
 
     def relax_h(self,h,maxiter=10,verbose=0):
@@ -395,19 +397,19 @@ class bwhModel(object):
         b,w,h=np.split(state,self.setup['nvar'])
         hsq=h**2
         state_hsq = np.concatenate((b,w,hsq))
-        return np.ravel((self.dbdt(b,w,h,t,self.p['p'],self.p['chi'],self.p['a'],self.p['omegaf']),
-                         self.dwdt(b,w,h,t,self.p['p'],self.p['chi'],self.p['a'],self.p['omegaf']),
-                         self.dhdt(b,w,h,t,self.p['p'],self.p['chi'],self.p['a'],self.p['omegaf']))) + self.lapmat*state_hsq
+        return np.ravel((self.dbdt(b,w,h,t,self.p['p'],self.p['n'],self.p['chi'],self.p['a'],self.p['omegaf']),
+                         self.dwdt(b,w,h,t,self.p['p'],self.p['n'],self.p['chi'],self.p['a'],self.p['omegaf']),
+                         self.dhdt(b,w,h,t,self.p['p'],self.p['n'],self.p['chi'],self.p['a'],self.p['omegaf']))) + self.lapmat*state_hsq
 
     def rhs_ode(self,state,t=0):
         b,w,h=state
-        return self.ode(b,w,h,t,self.p['p'],self.p['chi'],self.p['a'],self.p['omegaf']).T[0]
+        return self.ode(b,w,h,t,self.p['p'],self.p['n'],self.p['chi'],self.p['a'],self.p['omegaf']).T[0]
     def scipy_ode_rhs(self,t,state):
         b,w,h=state
-        return np.squeeze(self.ode(b,w,h,t,self.p['p'],self.p['chi'],self.p['a'],self.p['omegaf']))
+        return np.squeeze(self.ode(b,w,h,t,self.p['p'],self.p['n'],self.p['chi'],self.p['a'],self.p['omegaf']))
     def scipy_ode_jac(self,t,state):
         b,w,h=state
-        return self.localJac(b,w,h,t,self.p['p'],self.p['chi'],self.p['a'],self.p['omegaf'])
+        return self.localJac(b,w,h,t,self.p['p'],self.p['n'],self.p['chi'],self.p['a'],self.p['omegaf'])
     def calc_pde_analytic_jacobian(self,state):
         b,w,h=np.split(state,self.setup['nvar'])
         dbdb= sparse.diags(self.dbdb(b,w,h,self.p['chi']))
@@ -619,8 +621,8 @@ class bwhModel(object):
             while t < tout:
                 # Need to Euler update ONLY b and w fields
                 b,w,h=np.split(self.state,3)
-                self.b=b+self.dt*(self.dbdt(b,w,h,t,self.p['p'],self.p['chi'],self.p['a'],self.p['omegaf'])+self.lapmat_b*b)
-                self.w=w+self.dt*(self.dwdt(b,w,h,t,self.p['p'],self.p['chi'],self.p['a'],self.p['omegaf'])+self.lapmat_w*w)
+                self.b=b+self.dt*(self.dbdt(b,w,h,t,self.p['p'],self.p['n'],self.p['chi'],self.p['a'],self.p['omegaf'])+self.lapmat_b*b)
+                self.w=w+self.dt*(self.dwdt(b,w,h,t,self.p['p'],self.p['n'],self.p['chi'],self.p['a'],self.p['omegaf'])+self.lapmat_w*w)
                 self.h,flag=self.relax_h(h,verbose=0)
                 self.state=np.ravel((self.b,self.w,self.h))
                 t+=self.dt
@@ -695,9 +697,9 @@ class bwhModel(object):
             self.fftw=fftn(w)
             self.ffth=fftn(h)
             while t < tout:
-                self.fftb = self.multb*(self.fftb + self.dt*fftn(self.dbdt(b,w,h,t,self.p['p'],self.p['chi'],self.p['a'],self.p['omegaf'])))#.real
-                self.fftw = self.multw*(self.fftw + self.dt*fftn(self.dwdt(b,w,h,t,self.p['p'],self.p['chi'],self.p['a'],self.p['omegaf'])))#.real
-                self.ffth = self.multh*(self.ffth + self.dt*fftn(self.dhdt(b,w,h,t,self.p['p'],self.p['chi'],self.p['a'],self.p['omegaf'])))#.real
+                self.fftb = self.multb*(self.fftb + self.dt*fftn(self.dbdt(b,w,h,t,self.p['p'],self.p['n'],self.p['chi'],self.p['a'],self.p['omegaf'])))#.real
+                self.fftw = self.multw*(self.fftw + self.dt*fftn(self.dwdt(b,w,h,t,self.p['p'],self.p['n'],self.p['chi'],self.p['a'],self.p['omegaf'])))#.real
+                self.ffth = self.multh*(self.ffth + self.dt*fftn(self.dhdt(b,w,h,t,self.p['p'],self.p['n'],self.p['chi'],self.p['a'],self.p['omegaf'])))#.real
                 b= ifftn(self.fftb).real
                 w= ifftn(self.fftw).real
                 h= ifftn(self.ffth).real
@@ -723,8 +725,8 @@ class bwhModel(object):
             self.fftw=fftn(w)
             self.ffth=fftn(h)
             while t < tout:
-                self.fftb = self.multb*(self.fftb + self.dt*fftn(self.dbdt(b,w,h,t,self.p['p'],self.p['chi'],self.p['a'],self.p['omegaf'])))#.real
-                self.fftw = self.multw*(self.fftw + self.dt*fftn(self.dwdt(b,w,h,t,self.p['p'],self.p['chi'],self.p['a'],self.p['omegaf'])))#.real
+                self.fftb = self.multb*(self.fftb + self.dt*fftn(self.dbdt(b,w,h,t,self.p['p'],self.p['n'],self.p['chi'],self.p['a'],self.p['omegaf'])))#.real
+                self.fftw = self.multw*(self.fftw + self.dt*fftn(self.dwdt(b,w,h,t,self.p['p'],self.p['n'],self.p['chi'],self.p['a'],self.p['omegaf'])))#.real
                 b = ifftn(self.fftb).real
                 w = ifftn(self.fftw).real
                 h,self.converged_relaxation=self.relax_h(h,verbose=0)

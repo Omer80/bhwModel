@@ -5,9 +5,9 @@ Created on Tue May 15 07:08:40 2018
 
 @author: ohm
 """
-from bwhModel import bwhModel
+from bwhModel3 import bwhModel
 import numpy as np
-set2 = 'auto/bwh_set2.hdf5'
+set2 = 'auto/bwh_set3.hdf5'
 def simdrought(prec_i,prec_f,delta_p,delta_year,chi,
                Ps=set2,
                n=(512,512),l=(256.0,256.0),
@@ -43,7 +43,7 @@ def simdrought(prec_i,prec_f,delta_p,delta_year,chi,
     if create_movie and savefile is not None:
         savefile_base=savefile
     for i,prec in enumerate(prec_gradient_down):
-        print "Integration for p =",prec
+        print("Integration for p =",prec)
         if create_movie and savefile is not None:
             savefile=savefile_base+"_p{:4.3f}".format(prec).replace(".","_")
         b,w,h=m.split_state(Vs)
