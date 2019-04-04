@@ -464,7 +464,7 @@ class bwhModel(object):
     def calc_pde_numerical_jacobian(self,state,delta=0.00000001):
         n = len(state)
         jacobian = []
-        for j in xrange(n):
+        for j in range(n):
             state_plus = np.copy(state)
             state_minus = np.copy(state)
             state_plus[j] = state_plus[j]+delta
