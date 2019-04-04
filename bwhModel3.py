@@ -465,12 +465,6 @@ class bwhModel(object):
         t = np.arange(0,finish+step, step)
         self.time_elapsed+=finish
         return t,odeint(self.rhs_pde, initial_state, t)
-    def scipy_integrate_relax(self,initial_state,step=0.1,finish=1000):
-        """ """
-#        print "Integration using scipy odeint"
-        t = np.arange(0,finish+step, step)
-        self.time_elapsed+=finish
-        return t,odeint(self.rhs_pde, initial_state, t)
     def ode_integrate(self,initial_state,step=0.1,start=0,finish=1000,
                           method='BDF',**kwargs):
         """ Using the new scipy interface to BDF method for stiff equations
@@ -490,159 +484,64 @@ class bwhModel(object):
         t = np.arange(start,finish+step, step)
         return t,odeint(self.rhs_ode,initial_state, t).T
 
-    def euler_integrate(self,initial_state=None,step=0.1,finish=1000,**kwargs):
+    def euler_integrate(self,initial_state,step=0.1,finish=1000):
         """ """
-        if kwargs:
-            self.update_parameters(kwargs)
-        if initial_state is None:
-            initial_state=self.state            
-        time = np.arange(0,finish+step,step)
-        result=np.zeros((len(time),len(initial_state)))
-        t=0
-        result[0]=initial_state
-        for i,tout in enumerate(time[1:]):
-            old=result[i]
-            while t < tout:
-                new=old+self.dt*self.rhs_pde(old,self.time_elapsed)
-                old=new
-                t+=self.dt
-                self.time_elapsed+=self.dt
-            result[i+1]=old
-        self.state=result[-1]
-        return t,result
-    def euler_integrate_relax(self,initial_state=None,step=0.1,finish=1000,**kwargs):
-        """ """
-        if kwargs:
-            self.update_parameters(kwargs)
-        if initial_state is None:
-            initial_state=self.state            
-        time = np.arange(0,finish+step,step)
-        self.b,self.w,self.h=np.split(initial_state,3)
-        self.state=np.ravel((self.b,self.w,self.h))
-        self.h,flag=self.relax_h(self.h,maxiter=1000,verbose=1)
-        self.state=np.ravel((self.b,self.w,self.h))
-        result=np.zeros((len(time),len(initial_state)))
-        t=0
-        result[0]=initial_state
-        for i,tout in enumerate(time[1:]):
-            self.state=result[i]
-            while t < tout:
-                # Need to Euler update ONLY b and w fields
-                b,w,h=np.split(self.state,3)
-                self.b=b+self.dt*(self.dbdt(b,w,h,t,self.p['p'],self.p['n'],self.p['chi'],self.p['a'],self.p['omegaf'])+self.lapmat_b*b)
-                self.w=w+self.dt*(self.dwdt(b,w,h,t,self.p['p'],self.p['n'],self.p['chi'],self.p['a'],self.p['omegaf'])+self.lapmat_w*w)
-                self.h,flag=self.relax_h(h,verbose=0)
-                self.state=np.ravel((self.b,self.w,self.h))
-                t+=self.dt
-                self.time_elapsed+=self.dt
-            result[i+1]=self.state
-#        self.state=result[-1]
-        return t,result
-    def rk4_integrate(self,initial_state=None,step=0.1,finish=1000,**kwargs):
-        """ Integration using The Runge–Kutta method of 4th order as in:
-        https://en.wikipedia.org/wiki/Runge%E2%80%93Kutta_methods#The_Runge%E2%80%93Kutta_method
-        """
-        if kwargs:
-            self.update_parameters(kwargs)
-        if initial_state is None:
-            initial_state=self.state
-        time = np.arange(0,finish+step,step)
-        result=np.zeros((len(time),len(initial_state)))
-        t=0
-        result[0]=initial_state
-        for i,tout in enumerate(time[1:]):
-            old=result[i]
-            while t < tout:
-                k1=self.rhs_pde(old,self.time_elapsed)
-                k2=self.rhs_pde(old+0.5*self.dt*k1,self.time_elapsed+(self.dt/2.0))
-                k3=self.rhs_pde(old+0.5*self.dt*k2,self.time_elapsed+(self.dt/2.0))
-                k4=self.rhs_pde(old+self.dt*k3,self.time_elapsed+(self.dt))
-                new=old+(self.dt/6.0)*(k1+2.0*k2+2.0*k3+k4)
-                old=new
-                t+=self.dt
-                self.time_elapsed+=self.dt
-            result[i+1]=old
-        self.state=result[-1]
-        return time,result
-    def rk4_integrate_relax(self,initial_state=None,step=0.1,finish=1000,**kwargs):
-        """ Integration using The Runge–Kutta method of 4th order as in:
-        https://en.wikipedia.org/wiki/Runge%E2%80%93Kutta_methods#The_Runge%E2%80%93Kutta_method
-        """
-        if kwargs:
-            self.update_parameters(kwargs)
-        if initial_state is None:
-            initial_state=self.state
-        time = np.arange(0,finish+step,step)
-        result=np.zeros((len(time),len(initial_state)))
-        t=0
-        result[0]=initial_state
-        for i,tout in enumerate(time[1:]):
-            old=result[i]
-            while t < tout:
-                k1=self.rhs_pde(old,self.time_elapsed)
-                k2=self.rhs_pde(old+0.5*self.dt*k1,self.time_elapsed+(self.dt/2.0))
-                k3=self.rhs_pde(old+0.5*self.dt*k2,self.time_elapsed+(self.dt/2.0))
-                k4=self.rhs_pde(old+self.dt*k3,self.time_elapsed+(self.dt))
-                new=old+(self.dt/6.0)*(k1+2.0*k2+2.0*k3+k4)
-                old=new
-                t+=self.dt
-                self.time_elapsed+=self.dt
-            result[i+1]=old
-        self.state=result[-1]
-        return time,result
-    def pseudo_spectral_integrate(self,initial_state,step=0.1,finish=1000,**kwargs):
-#        print("Integration using pseudo-spectral step")
-        if kwargs:
-            self.update_parameters(kwargs)
         time = np.arange(0,finish+step,step)
         result=[]
         t=0
         result.append(initial_state)
-        for i,tout in enumerate(time[1:]):
+        for tout in time[1:]:
+            old=result[-1]
+            while t < tout:
+#                print "t=",t
+                new=old+self.dt*self.rhs_pde(old)
+                old=new
+                t+=self.dt
+            result.append(old)
+        return t,result
+    def rk4_integrate(self,initial_state,step=0.1,finish=1000):
+        """ """
+#        print "Integration using rk4 step"
+        time = np.arange(0,finish+step,step)
+        result=[]
+        t=0
+        result.append(initial_state)
+        for tout in time[1:]:
+            old=result[-1]
+            while t < tout:
+                k1=self.dt*self.rhs_pde(old,self.time_elapsed)
+                k2=self.dt*self.rhs_pde(old+0.5*k1,self.time_elapsed)
+                k3=self.dt*self.rhs_pde(old+0.5*k2,self.time_elapsed)
+                k4=self.dt*self.rhs_pde(old+k3,self.time_elapsed)
+                new=old+(1.0/6.0)*(k1+2.0*k2+2.0*k3+k4)
+                old=new
+                t+=self.dt
+                self.time_elapsed+=self.dt
+            result.append(old)
+        return time,result
+    def pseudo_spectral_integrate(self,initial_state,step=0.1,finish=1000):
+#        print "Integration using pseudo-spectral step"
+        time = np.arange(0,finish+step,step)
+        result=[]
+        t=0
+        result.append(initial_state)
+        for tout in time[1:]:
             self.state=result[-1]
             b,w,h=self.state.reshape(self.setup['nvar'],*self.setup['n'])
             self.fftb=fftn(b)
             self.fftw=fftn(w)
             self.ffth=fftn(h)
             while t < tout:
-                self.fftb = self.multb*(self.fftb + self.dt*fftn(self.dbdt(b,w,h,t,self.p['p'],self.p['n'],self.p['chi'],self.p['a'],self.p['omegaf'])))#.real
-                self.fftw = self.multw*(self.fftw + self.dt*fftn(self.dwdt(b,w,h,t,self.p['p'],self.p['n'],self.p['chi'],self.p['a'],self.p['omegaf'])))#.real
-                self.ffth = self.multh*(self.ffth + self.dt*fftn(self.dhdt(b,w,h,t,self.p['p'],self.p['n'],self.p['chi'],self.p['a'],self.p['omegaf'])))#.real
+                self.fftb = self.multb*(self.fftb + self.dt*fftn(self.dbdt(b,w,h,t,self.p['p'],self.p['chi'],self.p['a'],self.p['omegaf'])))#.real
+                self.fftw = self.multw*(self.fftw + self.dt*fftn(self.dwdt(b,w,h,t,self.p['p'],self.p['chi'],self.p['a'],self.p['omegaf'])))#.real
+                self.ffth = self.multh*(self.ffth + self.dt*fftn(self.dhdt(b,w,h,t,self.p['p'],self.p['chi'],self.p['a'],self.p['omegaf'])))#.real
                 b= ifftn(self.fftb).real
                 w= ifftn(self.fftw).real
                 h= ifftn(self.ffth).real
                 t+=self.dt
                 self.time_elapsed+=self.dt
-                self.state=np.ravel((b,w,h))
-            if self.verbose:
-                print ("tout {}, <b> = {:3.2f}, diff = {:4.3f}".format(tout,np.mean(b),np.amax(self.state-result[i-1])))
-            result.append(self.state)
-        return time,result
-    def pseudo_spectral_integrate_relax(self,initial_state,step=0.1,finish=1000,**kwargs):
-        print("Integration using pseudo-spectral relax step")
-        if kwargs:
-            self.update_parameters(kwargs)
-        time = np.arange(0,finish+step,step)
-        result=[]
-        t=0
-        result.append(initial_state)
-        for i,tout in enumerate(time[1:]):
-            self.state=result[-1]
-            b,w,h=self.state.reshape(self.setup['nvar'],*self.setup['n'])
-            self.fftb=fftn(b)
-            self.fftw=fftn(w)
-            self.ffth=fftn(h)
-            while t < tout:
-                self.fftb = self.multb*(self.fftb + self.dt*fftn(self.dbdt(b,w,h,t,self.p['p'],self.p['n'],self.p['chi'],self.p['a'],self.p['omegaf'])))#.real
-                self.fftw = self.multw*(self.fftw + self.dt*fftn(self.dwdt(b,w,h,t,self.p['p'],self.p['n'],self.p['chi'],self.p['a'],self.p['omegaf'])))#.real
-                b = ifftn(self.fftb).real
-                w = ifftn(self.fftw).real
-                h,self.converged_relaxation=self.relax_h(h,verbose=0)
-                t+=self.dt
-                self.time_elapsed+=self.dt
-                self.state=np.ravel((b,w,h))
-            if self.verbose:
-                print ("tout {}, <b> = {:3.2f}, diff = {:4.3f}".format(tout,np.mean(b),np.amax(self.state-result[i-1])))
+            self.state=np.ravel((b,w,h))
+            self.sim_step+=1
             result.append(self.state)
         return time,result
 
