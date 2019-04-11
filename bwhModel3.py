@@ -575,7 +575,7 @@ class bwhModel(object):
             elif Vs == "uniform":
                 p   = kwargs.get('p', None)
                 chi = kwargs.get('chi', None)
-                t,sol = m.ode_integrate([0.2,0.2,0.2],p=p,chi=chi)
+                t,sol = self.ode_integrate([0.2,0.2,0.2],p=p,chi=chi)
                 b= np.ones(n)*sol[0][-1]
                 w= np.ones(n)*sol[1][-1]
                 h= np.ones(n)*sol[2][-1]
