@@ -7,11 +7,11 @@ Created on Tue May 15 07:08:40 2018
 """
 from bwhModel3 import bwhModel
 import numpy as np
-set2 = 'auto/bwh_set3.hdf5'
+defaultPs = 'auto/bwh_set3.hdf5'
 def simdrought(prec_i,prec_f,delta_p,delta_year,chi,
-               Ps=set2,
+               Ps=defaultPs,
                n=(512,512),l=(256.0,256.0),
-               Vs_initial="random",rhs="oz_EQK",
+               Vs_initial="uniform",rhs="oz_EQK",
                bc="periodic",it="pseudo_spectral",
                first_time = 100.0,tol=1.0e-8,add_noise=0.01,
                fname="cont",verbose=True,
@@ -27,15 +27,19 @@ def simdrought(prec_i,prec_f,delta_p,delta_year,chi,
         fname = fname+"_"+Vs_initial
     prec_gradient_down = np.arange(prec_i,prec_f-delta_p,-delta_p)
     time_span = np.arange(delta_year,len(prec_gradient_down)*delta_year+delta_year,delta_year)
-    m = bwhModel(Vs=Vs_initial,Es=Es,Ps=Ps)
+    m = bwhModel(Vs=None,Es=Es,Ps=Ps)
+    if Vs_initial=="uniform":
+        m.setup_initial_condition("uniform",p=prec_i,chi=chi)
+    else:
+        m.setup_initial_condition(Vs_initial)
     m.setup['verbose']=verbose
     yr=m.p['conv_T_to_t']
     # Converging on the first solution using integration and then root
     Vs_init = m.integrate(m.initial_state,check_convergence=True,
                           max_time=first_time*yr,p=prec_i,chi=chi)
-    Es['rhs']="oz_EQK_relax"
-    m = bwhModel(Vs=Vs_initial,Es=Es,Ps=Ps)
-    m.setup['verbose']=verbose
+#    Es['rhs']="oz_EQK_relax"
+#    m = bwhModel(Vs=Vs_initial,Es=Es,Ps=Ps)
+#    m.setup['verbose']=verbose
     Vs = Vs_init.copy()
     b_sol = np.zeros((len(prec_gradient_down),n[0],n[1]))
     w_sol = np.zeros((len(prec_gradient_down),n[0],n[1]))
@@ -97,10 +101,11 @@ def simdrought(prec_i,prec_f,delta_p,delta_year,chi,
             pass
 
 def main(args):
-    simdrought(args.prec_i,args.prec_f,args.delta_p,
-               args.delta_year,args.chi,add_noise=args.noise,
-               create_movie=args.create_movie,savefile=args.savefile,
-               fname=args.fname,verbose=args.verbose,send_email=args.send_email)
+    if args.simdrought:
+        simdrought(args.prec_i,args.prec_f,args.delta_p,
+                   args.delta_year,args.chi,add_noise=args.noise,
+                   create_movie=args.create_movie,savefile=args.savefile,
+                   fname=args.fname,verbose=args.verbose,send_email=args.send_email)
     return 0
 
 def add_parser_arguments(parser):
@@ -114,6 +119,11 @@ def add_parser_arguments(parser):
                         dest="create_movie",
                         default=False,
                         help="Create movie at each simulation")
+    parser.add_argument("--simdrought",
+                        action="store_true",
+                        dest="simdrought",
+                        default=False,
+                        help="Start drought simulation")
 #    parser.add_argument("--check_convergence",
 #                        action="store_true",
 #                        dest="check_convergence",
@@ -124,7 +134,7 @@ def add_parser_arguments(parser):
                         dest="fname",
                         default="bwh_sim_drought",
                         help="Save bwh integration in fname")
-#    parser.add_argument("-n", 
+#    parser.add_argument("-n",
 #                        nargs='+', type=tuple,
 #                        dest="n",
 #                        default=(256,),
