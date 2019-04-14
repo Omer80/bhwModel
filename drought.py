@@ -78,8 +78,7 @@ def simdrought(prec_i,prec_f,delta_p,delta_year,chi,
                            'n':n,'l':l,
                            'b':b_sol,
                            'w':w_sol,
-                           'h':h_sol},
-            compression='blosc')
+                           'h':h_sol})
     if send_email is not None:
         try:
             import smtplib
