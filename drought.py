@@ -7,7 +7,7 @@ Created on Tue May 15 07:08:40 2018
 """
 from bwhModel3 import bwhModel
 import numpy as np
-defaultPs = 'auto/bwh_set3.hdf5'
+defaultPs = 'auto/bwh_set4.hdf5'
 def simdrought(prec_i,prec_f,delta_p,delta_year,chi,
                Ps=defaultPs,
                n=(512,512),l=(256.0,256.0),

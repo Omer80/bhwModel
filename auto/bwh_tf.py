@@ -13,8 +13,71 @@ from auto import run,merge,rl,plot
 import numpy as np
 import deepdish.io as dd
 
+
+def scan_for_betas(betas,name,resolution=11):
+	data = []
+	for beta in betas:
+		chi_range,p_range = scan_chi_range(beta,resolution)
+		data.append(p_range)
+	data.insert(0,chi_range)
+	data = np.array(data)
+	np.savetxt(name,data)
+
+def scan_chi_range(beta,resolution):
+    chi_range = np.linspace(0,1,resolution)
+    p_range = np.zeros(resolution)
+    for i,chi in enumerate(chi_range):
+        p_range[i]=obtain_Turing_prec_to_chi(chi,beta)
+    return chi_range,p_range
+
+
+def obtain_Turing_prec_to_chi(chi,beta=1.0,a=0,omegaf=1.0,HBnum=1,
+                             NMX=2000,NPR=1000,DSMAX=0.0151,DS=0.0002,pmax=10.0,
+                             model='bwh_to_EQK',parset='bwh_set4'):
+    """ Loads parameters from parset hdf5 dictionary file, save in parameters txt file and perform continuation """
+    p = loadparset(parset)
+    p['chi']=chi
+    p['a']=a
+    p['omegaf']=omegaf
+    p['beta']=beta
+    a = conv_dict_to_parset_array(p)
+    save_parset_to_txt_file(a)
+    st0 = run(e=model,c=model,NMX=NMX,NPR=NPR,DS=DS,DSMAX=DSMAX,IPS=1,ISP=2)
+    ind = 1
+    while (len(st0("HB"))<HBnum) and (ind<100):
+        if ind%2:
+            print 'at %d!' %ind
+            st0 = run(e=model,c=model,NMX=NMX,NPR=NPR,DS=DS,DSMAX=DSMAX/(1+ind/20.),IPS=1,ISP=2)
+        else:
+            print 'neg'
+            st0 = run(e=model,c=model,NMX=NMX,NPR=NPR,DS=-DS,DSMAX=DSMAX/(1+ind/20.),IPS=1,ISP=2)
+        ind+=1
+    if st0("HB"):
+        p = st0("HB1")['p']
+    else:
+        p = None
+    return p
+
+
+def GetTuring(name,step=100,HBnum=1,ICP1=['P','dummy','L','k'],DSMAX1=0.0173,NMX1=3000,UZZ=[]):
+    st0 = run(e=name,c=name,NMX=NMX1,NPR=1000,DS=0.000001,DSMAX=DSMAX1,IPS=1,ISP=2,UZR=UZZ,ICP=ICP1)
+    ind = 1
+    while (len(st0("HB"))<HBnum) and (ind<100):
+        if ind%2:
+            print 'at %d!' %ind
+            st0 = run(e=name,c=name,NMX=NMX1,NPR=1000,DS=0.000133,DSMAX=DSMAX1/(1+ind/20.),IPS=1,ISP=2,UZR=UZZ,ICP=ICP1)
+        else:
+            print 'neg'
+            st0 = run(e=name,c=name,NMX=NMX1,NPR=1000,DS=-0.000133,DSMAX=DSMAX1/(1+ind/20.),IPS=1,ISP=2,UZR=UZZ,ICP=ICP1)
+        ind+=1
+    if st0("HB"):
+        st1 = run(st0('HB%d'%min(HBnum,len(st0("HB")))),ISP=1,IPS=2,ICP=ICP1,NMX=step,NPR=1000,DSMAX=DSMAX1,DS=0.00001)
+    else:
+        st1 = []
+    return st0,st1
+
 def plotChi(chi=[0.0,0.5,1.0],
-            model='bwh_to_EQK',parset='bwh_set2',
+            model='bwh_to_EQK',parset='bwh_set4',
             pmax=10.0,DS=0.0002):
     chi02,ps2 = scanBif(chi=chi[0],parset=parset,pmax=pmax,model=model,DS=DS)
     chi05,ps5 = scanBif(chi=chi[1],parset=parset,pmax=pmax,model=model,DS=DS)
@@ -22,14 +85,15 @@ def plotChi(chi=[0.0,0.5,1.0],
     plot(chi02+chi05+chi07)
     return [chi02,chi05,chi07],[ps2,ps5,ps7]
 
-def scanBif(chi=0.0,a=0,omegaf=1.0,
+def scanBif(chi=0.0,a=0,omegaf=1.0,beta=1.0,
             NMX=2000,NPR=1000,DSMAX=0.0113,DS=0.0002,pmax=10.0,
-            model='bwh_tf',parset='bwh_set2'):
+            model='bwh_to_EQK',parset='bwh_set4'):
     """ Loads parameters from parset hdf5 dictionary file, save in parameters txt file and perform continuation """
     p = loadparset(parset)
     p['chi']=chi
     p['a']=a
     p['omegaf']=omegaf
+    p['beta']=beta
     a = conv_dict_to_parset_array(p)
     save_parset_to_txt_file(a)
     bif = run(e=model,c=model,NMX=NMX,NPR=NPR,DSMAX=DSMAX,DS=DS,RL1 = pmax)

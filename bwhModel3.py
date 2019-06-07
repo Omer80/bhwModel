@@ -50,7 +50,7 @@ Es_normal={'rhs':"oz_EQK",
 
 def main():
     global m,p
-    m = bwhModel(Es=Es_normal,Ps='auto/bwh_set3.hdf5',Vs="random")
+    m = bwhModel(Es=Es_normal,Ps='auto/bwh_set4.hdf5',Vs="random")
     return 0
 
 class bwhModel(object):

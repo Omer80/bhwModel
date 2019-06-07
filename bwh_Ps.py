@@ -1,20 +1,21 @@
 # set1 - from OZ paper parameters
-
-dimpar = {'Lambda_min' : 0.025,
-          'Lambda_max' : 0.030,
+from math import sqrt
+res=0.75*750/386.0
+dimpar = {'Lambda_min' : 0.025*sqrt(res),
+          'Lambda_max' : 0.030*sqrt(res),
           'K'      : 0.5,
           'E'      : 1.75,
-          'M0'     : 2.0,
-          'NW'     : 1.5,
-          'NH'     : 4.5,
+          'M0'     : 2.0*res,
+          'NW'     : 1.5*res,
+          'NH'     : 4.5*res,
           'DB'     : 0.1,
           'DW'     : 2.5,
-          'DH'     : 4.0,
+          'DH'     : 4.0/res,
           'RW'     : 0.3,
           'RH'     : 0.8,
-          'Gamma'  : 14.0,
+          'Gamma'  : 14.0*res,
           'P'      : 100.0,
-          'A'      : 120.0,
+          'A'      : 120.0*res,
           'Q'      : 2.0,
           'F'      : 0.01,
           's_wp'   : 0.085,
@@ -92,9 +93,9 @@ def loadParmSet(fname):
 if __name__ == '__main__':
     from scipy.io import savemat
     par=update_par()
-    name = 'bwh_set3'
+    name = 'bwh_set4'
     par['pc']=par['nuw'] * ( (par['alpha'] * par['f']) + par['nuh'])/ (par['alpha'] * par['f'])
-    print "Nondimensional:",
-    print par
+    print("Nondimensional:",)
+    print(par)
     saveParmSet(name,par,saveroot=False)
     savemat("./p2p/"+name+".mat",par)
