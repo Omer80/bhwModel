@@ -8,7 +8,7 @@ Created on Tue May 15 07:08:40 2018
 from bwhModel3 import bwhModel
 import numpy as np
 defaultPs = 'auto/bwh_set4.hdf5'
-def simdrought(prec_i,prec_f,delta_p,delta_year,chi,
+def simdrought(prec_i,prec_f,delta_p,delta_year,chi,beta,
                Ps=defaultPs,
                n=(512,512),l=(256.0,256.0),
                Vs_initial="uniform",rhs="oz_EQK",
@@ -29,14 +29,14 @@ def simdrought(prec_i,prec_f,delta_p,delta_year,chi,
     time_span = np.arange(delta_year,len(prec_gradient_down)*delta_year+delta_year,delta_year)
     m = bwhModel(Vs=None,Es=Es,Ps=Ps)
     if Vs_initial=="uniform":
-        m.setup_initial_condition("uniform",p=prec_i,chi=chi)
+        m.setup_initial_condition("uniform",p=prec_i,chi=chi,beta=beta)
     else:
         m.setup_initial_condition(Vs_initial)
     m.setup['verbose']=verbose
     yr=m.p['conv_T_to_t']
     # Converging on the first solution using integration and then root
     Vs_init = m.integrate(m.initial_state,check_convergence=True,
-                          max_time=first_time*yr,p=prec_i,chi=chi)
+                          max_time=first_time*yr,p=prec_i,chi=chi,beta=beta)
 #    Es['rhs']="oz_EQK_relax"
 #    m = bwhModel(Vs=Vs_initial,Es=Es,Ps=Ps)
 #    m.setup['verbose']=verbose
@@ -60,20 +60,21 @@ def simdrought(prec_i,prec_f,delta_p,delta_year,chi,
                            max_time=delta_year*yr,step=yr,
                            check_convergence=False,
                            savefile=savefile,create_movie=False,
-                           p=prec,chi=chi)
+                           p=prec,chi=chi,beta=beta)
         if rhs!="oz_EQK":
             if m.converged_relaxation==False:
                 time,result=m.pseudo_spectral_integrate(initial_state=Vs,
                                                         finish=delta_year*yr,
                                                         step=yr,
-                                                        p=prec,chi=chi)
+                                                        p=prec,chi=chi,beta=beta)
             Vs_new=result[-1]
         b,w,h=m.split_state(Vs_new)
         b_sol[i]=b
         w_sol[i]=w
         h_sol[i]=h
         Vs = np.ravel((b,w,h))
-    dd.save(fname+".hdf5",{'p':prec_gradient_down,"T":time_span,'chi':chi,
+    dd.save(fname+".hdf5",{'p':prec_gradient_down,"T":time_span,
+                           'chi':chi,'beta':beta,
                            'Ps_dimensional':m.p['dimpar'],
                            'n':n,'l':l,
                            'b':b_sol,
@@ -102,7 +103,7 @@ def simdrought(prec_i,prec_f,delta_p,delta_year,chi,
 def main(args):
     if args.simdrought:
         simdrought(args.prec_i,args.prec_f,args.delta_p,
-                   args.delta_year,args.chi,add_noise=args.noise,
+                   args.delta_year,args.chi,args.beta,add_noise=args.noise,
                    create_movie=args.create_movie,savefile=args.savefile,
                    fname=args.fname,verbose=args.verbose,send_email=args.send_email)
     return 0
@@ -189,6 +190,11 @@ def add_parser_arguments(parser):
                         type=float,
                         default=0.0,
                         help='Trade-off parameter value')
+    parser.add_argument('--beta',
+                        dest='beta',
+                        type=float,
+                        default=1.0,
+                        help='Trade-off shape parameter value')
     parser.add_argument('--noise',
                         dest='noise',
                         type=float,

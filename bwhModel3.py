@@ -44,7 +44,7 @@ Es_normal={'rhs':"oz_EQK",
         'bc':"neumann",
         'it':"pseudo_spectral",
         'dt':0.1,
-        'analyze':True,
+        'analyze':False,
         'verbose':True,
         'setPDE':True}
 
@@ -157,9 +157,9 @@ class bwhModel(object):
             eta_max = p['eta']*(1.0+p['del_to'])
             K_min   = (1.0-p['del_to'])
             K_max   = (1.0+p['del_to'])
-            K_to   = K_max    + p['chi']*(K_min-K_max)
-            q_to   = (q_max   + p['chi']*(q_min-q_max))/K_to
-            eta_to = (eta_max + (1.0-p['chi'])*(eta_min-eta_max))*K_to
+            K_to   = K_max    + (p['chi']**p['beta'])*(K_min-K_max)
+            q_to   = (q_max   + (p['chi']**p['beta'])*(q_min-q_max))/K_to
+            eta_to = (eta_max + ((1.0-p['chi'])**p['beta'])*(eta_min-eta_max))*K_to
             gam    = p['gamma']*K_to
             G = w*(1.0 + eta_to*b)*(1.0 + eta_to*b)
             I = (p['alpha']*((b + q_to*p['f'])/(b + q_to)))
@@ -201,13 +201,13 @@ class bwhModel(object):
             self.conv_K = lambdify((b,p['chi']),self.sub_parms(b*K_to),"numpy",dummify=False)
         """ Creating numpy functions """
         symeqs = Matrix([self.dbdt_eq,self.dwdt_eq,self.dhdt_eq])
-        self.ode  = lambdify((b,w,h,t,p['p'],p['chi'],p['a'],p['omegaf']),self.sub_parms(symeqs),"numpy",dummify=False)
-        self.dbdt = ufuncify([b,w,h,t,p['p'],p['chi'],p['a'],p['omegaf']],[self.sub_parms(self.dbdt_eq)])
-        self.dwdt = ufuncify([b,w,h,t,p['p'],p['chi'],p['a'],p['omegaf']],[self.sub_parms(self.dwdt_eq)])
-        self.dhdt = ufuncify([b,w,h,t,p['p'],p['chi'],p['a'],p['omegaf']],[self.sub_parms(self.dhdt_eq)])
+        self.ode  = lambdify((b,w,h,t,p['p'],p['chi'],p['beta'],p['a'],p['omegaf']),self.sub_parms(symeqs),"numpy",dummify=False)
+        self.dbdt = ufuncify([b,w,h,t,p['p'],p['chi'],p['beta'],p['a'],p['omegaf']],[self.sub_parms(self.dbdt_eq)])
+        self.dwdt = ufuncify([b,w,h,t,p['p'],p['chi'],p['beta'],p['a'],p['omegaf']],[self.sub_parms(self.dwdt_eq)])
+        self.dhdt = ufuncify([b,w,h,t,p['p'],p['chi'],p['beta'],p['a'],p['omegaf']],[self.sub_parms(self.dhdt_eq)])
         localJac   = symeqs.jacobian(Matrix([b,w,h]))
         self.sym_localJac = localJac
-        self.localJac = lambdify((b,w,h,t,p['p'],p['chi'],p['a'],p['omegaf']),self.sub_parms(localJac),"numpy",dummify=False)
+        self.localJac = lambdify((b,w,h,t,p['p'],p['chi'],p['beta'],p['a'],p['omegaf']),self.sub_parms(localJac),"numpy",dummify=False)
         if self.setup['setPDE'] and self.setup['analyze']:
             self.dbdb = ufuncify([b,w,h,p['chi']],[self.sub_parms(localJac[0,0])])
             self.dbdw = ufuncify([b,w,h,p['chi']],[self.sub_parms(localJac[0,1])])
@@ -261,7 +261,7 @@ class bwhModel(object):
             self.p['beta']=beta
         if a is not None:
             self.p['a']=a
-        return linalg.eigvals(self.localJac(b,w,h,t,self.p['p'],self.p['chi'],self.p['a'],self.p['omegaf']))
+        return linalg.eigvals(self.localJac(b,w,h,t,self.p['p'],self.p['chi'],self.p['beta'],self.p['a'],self.p['omegaf']))
     def calc_SpatODE_eigs(self,b,w,h):
         return linalg.eigvals(self.SpatODEjac(b,w,h))
 
@@ -283,7 +283,7 @@ class bwhModel(object):
         b,w,h,t = symbols('b w h t')
         for key in list(self.p.keys()):
 #            print key
-            if key!='p' and key!='chi' and key!='a' and key!='omegaf':
+            if key!='p' and key!='chi' and key!='beta' and key!='a' and key!='omegaf':
                 eqs=eqs.subs(self.Ps_symbols[key],self.p[key])
         return eqs
     def calc_P_PET(self,p,w):
@@ -310,27 +310,27 @@ class bwhModel(object):
 
     def rhs_pde(self,state,t=0):
         b,w,h=np.split(state,self.setup['nvar'])
-        return np.ravel((self.dbdt(b,w,h,t,self.p['p'],self.p['chi'],self.p['a'],self.p['omegaf']),
-                         self.dwdt(b,w,h,t,self.p['p'],self.p['chi'],self.p['a'],self.p['omegaf']),
-                         self.dhdt(b,w,h,t,self.p['p'],self.p['chi'],self.p['a'],self.p['omegaf']))) + self.lapmat*state
+        return np.ravel((self.dbdt(b,w,h,t,self.p['p'],self.p['chi'],self.p['beta'],self.p['a'],self.p['omegaf']),
+                         self.dwdt(b,w,h,t,self.p['p'],self.p['chi'],self.p['beta'],self.p['a'],self.p['omegaf']),
+                         self.dhdt(b,w,h,t,self.p['p'],self.p['chi'],self.p['beta'],self.p['a'],self.p['omegaf']))) + self.lapmat*state
     
     def rhs_pde_nonlindiff(self,state,t=0):
         b,w,h=np.split(state,self.setup['nvar'])
         hsq=h**2
         state_hsq = np.concatenate((b,w,hsq))
-        return np.ravel((self.dbdt(b,w,h,t,self.p['p'],self.p['chi'],self.p['a'],self.p['omegaf']),
-                         self.dwdt(b,w,h,t,self.p['p'],self.p['chi'],self.p['a'],self.p['omegaf']),
-                         self.dhdt(b,w,h,t,self.p['p'],self.p['chi'],self.p['a'],self.p['omegaf']))) + self.lapmat*state_hsq
+        return np.ravel((self.dbdt(b,w,h,t,self.p['p'],self.p['chi'],self.p['beta'],self.p['a'],self.p['omegaf']),
+                         self.dwdt(b,w,h,t,self.p['p'],self.p['chi'],self.p['beta'],self.p['a'],self.p['omegaf']),
+                         self.dhdt(b,w,h,t,self.p['p'],self.p['chi'],self.p['beta'],self.p['a'],self.p['omegaf']))) + self.lapmat*state_hsq
 
     def rhs_ode(self,state,t=0):
         b,w,h=state
-        return self.ode(b,w,h,t,self.p['p'],self.p['chi'],self.p['a'],self.p['omegaf']).T[0]
+        return self.ode(b,w,h,t,self.p['p'],self.p['chi'],self.p['beta'],self.p['a'],self.p['omegaf']).T[0]
     def scipy_ode_rhs(self,t,state):
         b,w,h=state
-        return np.squeeze(self.ode(b,w,h,t,self.p['p'],self.p['chi'],self.p['a'],self.p['omegaf']))
+        return np.squeeze(self.ode(b,w,h,t,self.p['p'],self.p['chi'],self.p['beta'],self.p['a'],self.p['omegaf']))
     def scipy_ode_jac(self,t,state):
         b,w,h=state
-        return self.localJac(b,w,h,t,self.p['p'],self.p['chi'],self.p['a'],self.p['omegaf'])
+        return self.localJac(b,w,h,t,self.p['p'],self.p['chi'],self.p['beta'],self.p['a'],self.p['omegaf'])
     def calc_pde_analytic_jacobian(self,state):
         b,w,h=np.split(state,self.setup['nvar'])
         dbdb= sparse.diags(self.dbdb(b,w,h,self.p['chi']))
