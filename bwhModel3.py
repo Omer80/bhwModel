@@ -532,9 +532,9 @@ class bwhModel(object):
             self.fftw=fftn(w)
             self.ffth=fftn(h)
             while t < tout:
-                self.fftb = self.multb*(self.fftb + self.dt*fftn(self.dbdt(b,w,h,t,self.p['p'],self.p['chi'],self.p['a'],self.p['omegaf'])))#.real
-                self.fftw = self.multw*(self.fftw + self.dt*fftn(self.dwdt(b,w,h,t,self.p['p'],self.p['chi'],self.p['a'],self.p['omegaf'])))#.real
-                self.ffth = self.multh*(self.ffth + self.dt*fftn(self.dhdt(b,w,h,t,self.p['p'],self.p['chi'],self.p['a'],self.p['omegaf'])))#.real
+                self.fftb = self.multb*(self.fftb + self.dt*fftn(self.dbdt(b,w,h,t,self.p['p'],self.p['chi'],self.p['beta'],self.p['a'],self.p['omegaf'])))#.real
+                self.fftw = self.multw*(self.fftw + self.dt*fftn(self.dwdt(b,w,h,t,self.p['p'],self.p['chi'],self.p['beta'],self.p['a'],self.p['omegaf'])))#.real
+                self.ffth = self.multh*(self.ffth + self.dt*fftn(self.dhdt(b,w,h,t,self.p['p'],self.p['chi'],self.p['beta'],self.p['a'],self.p['omegaf'])))#.real
                 b= ifftn(self.fftb).real
                 w= ifftn(self.fftw).real
                 h= ifftn(self.ffth).real
