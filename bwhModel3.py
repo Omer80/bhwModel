@@ -39,8 +39,8 @@ import deepdish.io as dd
 #from tlm_parameters import par
 
 Es_normal={'rhs':"oz_EQK",
-        'n':(1024,),
-        'l':(256.0,),
+        'n':(512,512),
+        'l':(256.0,256.0),
         'bc':"neumann",
         'it':"pseudo_spectral",
         'dt':0.1,
@@ -639,17 +639,11 @@ class bwhModel(object):
             fig.subplots_adjust(right=0.8)
 #            ax1.imshow(b,cmap=plt.cm.YlGn, vmin = bmin, vmax = bmax)
             ax1.imshow(b,cmap=plt.cm.YlGn)
-            ax1.set_adjustable('box-forced')
-            ax1.autoscale(False)
             ax1.set_title(r'$b$', fontsize=fontsize)
             ax2.imshow(w,cmap=plt.cm.Blues)
-            ax2.set_adjustable('box-forced')
-            ax2.autoscale(False)
             ax2.set_title(r'$h$', fontsize=fontsize)
 #            ax3.imshow(w,cmap=plt.cm.Blues, vmin = smin, vmax = smax)
             ax3.imshow(h,cmap=plt.cm.Blues)
-            ax3.set_adjustable('box-forced')
-            ax3.autoscale(False)
             ax3.set_title(r'$h$', fontsize=fontsize)
 #            im4=ax4.imshow(h,cmap=plt.cm.Blues, vmin = smin, vmax = smax)
 #            cbar_ax2 = fig.add_axes([0.85, 0.54, 0.03, 0.35])

@@ -100,12 +100,72 @@ def simdrought(prec_i,prec_f,delta_p,delta_year,chi,beta,
         except gaierror:
             pass
 
+
+def integrate(prec_i,chi,beta,
+              Ps=defaultPs,
+              n=(512,512),l=(256.0,256.0),
+              Vs_initial="uniform",rhs="oz_EQK",
+              bc="periodic",it="pseudo_spectral",
+              first_time = 1000.0,tol=1.0e-8,add_noise=0.01,
+              fname="cont",verbose=True,
+              savefile=None,create_movie=False,
+              send_email=None):
+    import deepdish.io as dd
+    if send_email is not None:
+        import getpass
+        pswd = getpass.getpass('Password:')
+    Es={'rhs':rhs,'n':n,'l':l,'bc':bc,'it':it,
+        'dt':0.1,'verbose':verbose,'analyze':False,'setPDE':True}
+    if Vs_initial.endswith(".dat",-4):
+        state = np.loadtxt(Vs_initial)
+        m = bwhModel(Es=Es,Ps=Ps,Vs=state)
+    else:
+        m = bwhModel(Es=Es,Ps=Ps,Vs=None)
+        if Vs_initial=="uniform":
+            m.setup_initial_condition("uniform",p=prec_i,chi=chi,beta=beta)
+        else:
+            m.setup_initial_condition(Vs_initial)
+    m.setup['verbose']=verbose
+    yr=m.p['conv_T_to_t']
+#    sol = Vs_initial
+    sol = m.integrate(m.initial_state,check_convergence=True,
+                      max_time=first_time*yr,p=prec_i,chi=chi,beta=beta)
+    b,w,h = m.split_state(sol)
+    dd.save(fname+".hdf5",{'p':prec_i,'chi':chi,'beta':beta,
+                           'Ps_dimensional':m.p['dimpar'],
+                           'n':n,'l':l,'state':sol,
+                           'b':b,'w':w,'h':h})
+    if send_email is not None:
+        try:
+            import smtplib
+            from socket import gaierror
+            server = smtplib.SMTP('smtp.gmail.com', 587)
+            server.ehlo()
+            server.starttls()
+            server.login(send_email, pswd)
+            msg = "\r\n".join([
+                    "From: {}".format(send_email),
+                    "To: {}".format(send_email),
+                    "Subject: Drought bwh simulations finished",
+                    "",
+                    "Drought bwh simulations finished and saved to:", fname
+                    ])
+            server.sendmail(send_email, send_email, msg)
+            server.quit()
+        except gaierror:
+            pass
+
 def main(args):
     if args.simdrought:
         simdrought(args.prec_i,args.prec_f,args.delta_p,
                    args.delta_year,args.chi,args.beta,add_noise=args.noise,
                    create_movie=args.create_movie,savefile=args.savefile,
                    fname=args.fname,verbose=args.verbose,send_email=args.send_email)
+    elif args.integrate:
+        integrate(args.prec_i,args.chi,args.beta,
+                  Vs_initial=args.Vs_initial,
+                  savefile=args.savefile,
+                  fname=args.fname,verbose=args.verbose,send_email=args.send_email)
     return 0
 
 def add_parser_arguments(parser):
@@ -124,6 +184,11 @@ def add_parser_arguments(parser):
                         dest="simdrought",
                         default=False,
                         help="Start drought simulation")
+    parser.add_argument("--integrate",
+                        action="store_true",
+                        dest="integrate",
+                        default=False,
+                        help="Start time integration")
 #    parser.add_argument("--check_convergence",
 #                        action="store_true",
 #                        dest="check_convergence",
@@ -134,6 +199,11 @@ def add_parser_arguments(parser):
                         dest="fname",
                         default="bwh_sim_drought",
                         help="Save bwh integration in fname")
+    parser.add_argument("--VS",
+                        type=str, nargs='?',
+                        dest="Vs_initial",
+                        default="uniform",
+                        help="Initial state")
 #    parser.add_argument("-n",
 #                        nargs='+', type=tuple,
 #                        dest="n",
