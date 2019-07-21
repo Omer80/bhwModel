@@ -108,7 +108,7 @@ def integrate(prec_i,chi,beta,
               bc="periodic",it="pseudo_spectral",
               first_time = 1000.0,tol=1.0e-8,add_noise=0.01,
               fname="cont",verbose=True,
-              savefile=None,create_movie=False,
+              create_movie=False,
               send_email=None):
     import deepdish.io as dd
     if send_email is not None:
@@ -162,9 +162,8 @@ def main(args):
                    create_movie=args.create_movie,savefile=args.savefile,
                    fname=args.fname,verbose=args.verbose,send_email=args.send_email)
     elif args.integrate:
-        integrate(args.prec_i,args.chi,args.beta,
+        integrate(prec_i=args.prec_i,chi=args.chi,beta=args.beta,
                   Vs_initial=args.Vs_initial,
-                  savefile=args.savefile,
                   fname=args.fname,verbose=args.verbose,send_email=args.send_email)
     return 0
 
