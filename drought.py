@@ -132,6 +132,7 @@ def integrate(prec_i,chi,beta,
         print(m.p)
         print("Dimpar:",m.p['dimpar'])
         print("chi=",chi,"beta=",beta)
+        print("fname:",fname,", fname type:",type(fname))
 #    sol = Vs_initial
     if not test:
         sol = m.integrate(m.initial_state,check_convergence=True,
