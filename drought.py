@@ -109,7 +109,7 @@ def integrate(prec_i,chi,beta,
               first_time = 1000.0,tol=1.0e-8,add_noise=0.01,
               fname="cont",verbose=True,
               create_movie=False,
-              send_email=None):
+              send_email=None, test=False):
     import deepdish.io as dd
     if send_email is not None:
         import getpass
@@ -127,11 +127,19 @@ def integrate(prec_i,chi,beta,
             m.setup_initial_condition(Vs_initial)
     m.setup['verbose']=verbose
     yr=m.p['conv_T_to_t']
+    if test:
+        print("Test session:")
+        print(m.p)
+        print("Dimpar:",m.p['dimpar'])
+        print("chi=",chi,"beta=",beta)
 #    sol = Vs_initial
-    sol = m.integrate(m.initial_state,check_convergence=True,
-                      max_time=first_time*yr,p=prec_i,chi=chi,beta=beta)
+    if not test:
+        sol = m.integrate(m.initial_state,check_convergence=True,
+                          max_time=first_time*yr,p=prec_i,chi=chi,beta=beta)
+    elif test:
+        sol = m.initial_state
     b,w,h = m.split_state(sol)
-    dd.save(fname+".hdf5",{'p':prec_i,'chi':chi,'beta':beta,
+    dd.save(fname+".hdf5",{'p':prec_i,'chi':float(chi),'beta':float(beta),
                            'Ps_dimensional':m.p['dimpar'],
                            'n':n,'l':l,'state':sol,
                            'b':b,'w':w,'h':h})
@@ -164,7 +172,8 @@ def main(args):
     elif args.integrate:
         integrate(prec_i=args.prec_i,chi=args.chi,beta=args.beta,
                   Vs_initial=args.Vs_initial,
-                  fname=args.fname,verbose=args.verbose,send_email=args.send_email)
+                  fname=args.fname,verbose=args.verbose,send_email=args.send_email,
+                  test=args.test)
     return 0
 
 def add_parser_arguments(parser):
@@ -173,6 +182,11 @@ def add_parser_arguments(parser):
                         dest="verbose",
                         default=False,
                         help="Turn on debuging messages")
+    parser.add_argument("--test",
+                        action="store_true",
+                        dest="test",
+                        default=False,
+                        help="Turn on test mode")
     parser.add_argument("--create_movie",
                         action="store_true",
                         dest="create_movie",
