@@ -119,6 +119,7 @@ def integrate(prec_i,chi,beta,
     if Vs_initial.endswith(".dat",-4):
         state = np.loadtxt(Vs_initial)
         m = bwhModel(Es=Es,Ps=Ps,Vs=state)
+        fname = str(Vs_initial[:-4])
     else:
         m = bwhModel(Es=Es,Ps=Ps,Vs=None)
         if Vs_initial=="uniform":
