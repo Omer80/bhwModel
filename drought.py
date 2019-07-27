@@ -136,14 +136,16 @@ def integrate(prec_i,chi,beta,
         print("fname:",fname,", fname type:",type(fname))
 #    sol = Vs_initial
     if not test:
+        print("****Starting Integration****")
         sol = m.integrate(m.initial_state,check_convergence=True,
                           max_time=first_time*yr,p=prec_i,chi=chi,beta=beta)
+        print("****Integration Finished****")
     elif test:
         sol = m.initial_state
     b,w,h = m.split_state(sol)
     dd.save(fname+".hdf5",{'p':prec_i,'chi':float(chi),'beta':float(beta),
                            'Ps_dimensional':m.p['dimpar'],
-                           'n':n,'l':l,'state':sol,
+                           'n':n,'l':l,'state':sol,'test':test,
                            'b':b,'w':w,'h':h})
     if send_email is not None:
         try:
