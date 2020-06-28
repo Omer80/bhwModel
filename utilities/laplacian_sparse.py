@@ -34,7 +34,7 @@ def create_laplacian_skelton(n,bc = "neumann"):
     from scipy.sparse import diags
 #    nvar = len(coeff.shape)
     if len(n) == 1:
-        print "Creating 1D laplacian"
+        print("Creating 1D laplacian")
         nx = n[0]
         main_diag = np.ones(nx)*-2.0
         side_diag = side_diag = np.ones(nx-1)
@@ -50,7 +50,7 @@ def create_laplacian_skelton(n,bc = "neumann"):
             diagonals = [main_diag,low_side,up_side]
             offsets = [0, -1, 1]
     elif len(n) == 2:
-        print "Creating 2D laplacian"
+        print("Creating 2D laplacian")
         nx = n[0]
         ny = n[1]
         N  = nx*ny
@@ -91,7 +91,7 @@ def create_Crank_Nicolson_matrices(n,l,dt,bc = "neumann",coeff = [1.0]):
     LM = []
     RM = []
     for r in r_list:
-        print "Creating 1D Crank Nicolson matrices"
+        print("Creating 1D Crank Nicolson matrices")
         nx = n[0]
         LM_main_diag = (1.0+2.0*r)*np.ones(nx) 
         LM_side_diag = (-r)*np.ones(nx-1)
@@ -126,7 +126,7 @@ def create_laplacian(n,l, bc = "neumann" , coeff = [1.0],verbose=False):
 #    nvar = len(coeff.shape)
     if len(n) == 1:
         if verbose:
-            print "Creating 1D laplacian"
+            print("Creating 1D laplacian")
         nx = n[0]
         main_diag = np.ones(nx)*-2.0
         side_diag = side_diag = np.ones(nx-1)
@@ -143,7 +143,7 @@ def create_laplacian(n,l, bc = "neumann" , coeff = [1.0],verbose=False):
             offsets = [0, -1, 1]
     elif len(n) == 2:
         if verbose:
-            print "Creating 2D laplacian"
+            print("Creating 2D laplacian")
         nx = n[0]
         ny = n[1]
         N  = nx*ny
@@ -169,7 +169,7 @@ def create_laplacian(n,l, bc = "neumann" , coeff = [1.0],verbose=False):
             offsets = [0, -1, 1,(nx),-(nx)]
     laplacian = diags(diagonals, offsets, format="csr")
     if len(coeff.shape)==1:
-        blocks = [laplacian*coeff[i] for i in xrange(coeff.shape[0])]
+        blocks = [laplacian*coeff[i] for i in range(coeff.shape[0])]
         laplacian = block_diag(blocks)
     elif len(coeff.shape)==2:
         blocks=[]
@@ -193,7 +193,7 @@ def create_gradient(n,l, bc = "neumann" , coeff = [1.0]):
     coeff=np.array(coeff)
 #    nvar = len(coeff.shape)
     if len(n) == 1:
-        print "Creating 1D gradient"
+        print("Creating 1D gradient")
         nx = n[0]
         main_diag = np.ones(nx)*(-1.0)
         side_diag = side_diag = np.ones(nx-1)
@@ -211,7 +211,7 @@ def create_gradient(n,l, bc = "neumann" , coeff = [1.0]):
             diagonals = [main_diag,up_side]
             offsets = [0, 1]
     elif len(n) == 2:
-        print "Creating 2D gradient"
+        print("Creating 2D gradient")
         nx = n[0]
         ny = n[1]
         N  = nx*ny
@@ -237,7 +237,7 @@ def create_gradient(n,l, bc = "neumann" , coeff = [1.0]):
             offsets = [0, -1, 1,(nx),-(nx)]
     gradient = diags(diagonals, offsets, format="csr")
     if len(coeff.shape)==1:
-        blocks = [gradient*coeff[i] for i in xrange(coeff.shape[0])]
+        blocks = [gradient*coeff[i] for i in range(coeff.shape[0])]
         gradient = block_diag(blocks)
     elif len(coeff.shape)==2:
         blocks=[]

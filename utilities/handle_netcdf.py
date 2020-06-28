@@ -38,7 +38,7 @@ def setup_simulation(fname,Ps,Es):
     3 continuation - will contain datasets of array of stats values along the
     """
     with netCDF4.Dataset("%s.nc"%fname, 'w', format='NETCDF4') as rootgrp:
-        print "Configuring netCDF4 file."
+        print("Configuring netCDF4 file.")
         setup = rootgrp.createGroup('setup')
         parms = rootgrp.createGroup('Ps')
         setattr(setup, 'nd',int(len(Es['n']))) 
@@ -60,18 +60,18 @@ def setup_simulation(fname,Ps,Es):
         x.units = "m"
         x[:] = np.linspace(0,Es['l'][0], Es['n'][0])
         if len(Es['n']) == 1:
-            print "Setting up 1D variables"
+            print("Setting up 1D variables")
             for var in Es['Vs_symbols']:
                 rootgrp.createVariable(str(var), 'f8', ('time', 'x',),zlib=True)
         elif len(Es['n']) == 2:
-            print "Setting up 2D variables"
+            print("Setting up 2D variables")
             rootgrp.createDimension("y", Es['n'][1])
             y = rootgrp.createVariable('y', 'f4', ('y',),zlib=True)
             y.units = "m"
             y[:] = np.linspace(0,Es['l'][1], Es['n'][1])
             for var in Es['Vs_symbols']:
                 rootgrp.createVariable(str(var), 'f8', ('time', 'x', 'y',),zlib=True)
-        print "Output: netCDF file was created: ", fname+".nc"
+        print("Output: netCDF file was created: ", fname+".nc")
     
 def save_sim_snapshot(fname,step,time,Vs,Es):
     """ Save snapshot of the four fields b1,b2,b3,s1,s2, together with the time
@@ -112,7 +112,7 @@ def create_animation(fname,output=None,showtime=True):
             b = rootgrp['b'][:,:]
             w = rootgrp['w'][:,:]
             h = rootgrp['h'][:,:]
-            for i in xrange(len(t)):
+            for i in range(len(t)):
                 line1, = ax[0].plot(x,b[i],'g-')
                 line2, = ax[1].plot(x,w[i],'b-')
                 line3, = ax[2].plot(x,h[i],'m-')
@@ -141,7 +141,7 @@ def create_animation(fname,output=None,showtime=True):
     #        ax1.autoscale(False)
             ax[2].set_title(r'$h$', fontsize=25)
             h = rootgrp['h'][:,:,:]
-            for i in xrange(len(t)):
+            for i in range(len(t)):
                 im1 = ax[0].imshow(b[i],cmap=plt.cm.YlGn, animated=True,vmin=0.0,vmax=1.0)
                 im2 = ax[1].imshow(w[i],cmap=plt.cm.Blues, animated=True,vmin=0.0,vmax=1.0)
                 im3 = ax[2].imshow(h[i],cmap=plt.cm.Purples, animated=True,vmin=0.0,vmax=1.0)
@@ -159,5 +159,5 @@ def create_animation(fname,output=None,showtime=True):
         ani.save('%s.mp4'%fname)
     elif type(output)==str:
         ani.save('%s.mp4'%output)
-    print "Movie made!"
+    print("Movie made!")
 
